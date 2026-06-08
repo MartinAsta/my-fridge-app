@@ -11,7 +11,7 @@ from .security import hash_password
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI(title="What's in My Fridge API")
+app = FastAPI(title="My Fridge API")
 
 app.add_middleware(
     CORSMiddleware,

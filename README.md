@@ -1,4 +1,4 @@
-# What's in My Fridge?
+# My Fridge?
 
 A full-stack web application that helps users track the ingredients they have at home and discover what meals they can cook with them.
 
