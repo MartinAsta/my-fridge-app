@@ -7,7 +7,9 @@ from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
 from .models.user_model import User
+from .models.restaurant_model import Restaurant
 from .schemas.user_schema import UserCreate, UserRead
+from .schemas.restaurant_schema import RestaurantCreate,RestaurantRead,RestaurantUpdate
 from .schemas.auth_schema import LoginRequest, Token
 from .security import hash_password, verify_password, create_access_token, decode_access_token
 
@@ -24,6 +26,23 @@ app.add_middleware(
 )
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
+
+@app.post("/restaurant/create", response_model=RestaurantRead, status_code=201)
+def create_restaurant(payload: RestaurantCreate, db: Session = Depends(get_db)):
+    if payload.password != payload.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+    existing_restaurant = db.execute(
+        select(Restaurant).where(Restaurant.restaurant_name == payload.restaurant_name)
+    ).scalar_one_or_none()
+
+    if existing_restaurant:
+        raise HTTPException(status_code=409, detail="This restaurant already exists")
+    
+    restaurant = Restaurant(
+        restaurant_name = payload.restaurant_name,
+        password_hash = hash_password(payload.password)
+        #NEED TO CHECK HOW TO DO THAT WITH THE JWT TOKENS
+    )
 
 @app.post("/auth/register", response_model=UserRead, status_code=201)
 def register_user(payload: UserCreate, db: Session = Depends(get_db)):

@@ -1,10 +1,15 @@
+from __future__ import annotations
+
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Identity, String, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
 
+if TYPE_CHECKING:
+    from .restaurant_model import Restaurant
 
 class User(Base):
     __tablename__ = "users"
@@ -17,4 +22,10 @@ class User(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         nullable=False,
+    )
+
+    restaurants: Mapped[list["Restaurant"]] = relationship(
+    "Restaurant",
+    back_populates="owner",
+    cascade="all, delete-orphan",
     )
