@@ -4,7 +4,7 @@ export function Home() {
     return (
         <div className="app">
             <header className="header">
-                <div className="logo">What's in My Fridge?</div>
+                <div className="logo">MyRestaurant</div>
                 <LogInButton />
             </header>
 
