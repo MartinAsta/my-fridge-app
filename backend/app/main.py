@@ -27,22 +27,62 @@ app.add_middleware(
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="auth/login")
 
+def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db),
+) -> User:
+    payload = decode_access_token(token)
+    username = payload.get("sub")
+
+    if not username:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    user = db.execute(
+        select(User).where(User.username == username)
+    ).scalar_one_or_none()
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    return user
+
 @app.post("/restaurant/create", response_model=RestaurantRead, status_code=201)
-def create_restaurant(payload: RestaurantCreate, db: Session = Depends(get_db)):
-    if payload.password != payload.confirm_password:
-        raise HTTPException(status_code=400, detail="Passwords do not match")
+def create_restaurant(
+    payload: RestaurantCreate,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
     existing_restaurant = db.execute(
         select(Restaurant).where(Restaurant.restaurant_name == payload.restaurant_name)
     ).scalar_one_or_none()
 
     if existing_restaurant:
         raise HTTPException(status_code=409, detail="This restaurant already exists")
-    
+
     restaurant = Restaurant(
-        restaurant_name = payload.restaurant_name,
-        password_hash = hash_password(payload.password)
-        #NEED TO CHECK HOW TO DO THAT WITH THE JWT TOKENS
+        restaurant_name=payload.restaurant_name,
+        password_hash=hash_password(payload.password),
+        owner_id=current_user.id,
     )
+
+    db.add(restaurant)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Restaurant already exists")
+
+    db.refresh(restaurant)
+    return restaurant
 
 @app.post("/auth/register", response_model=UserRead, status_code=201)
 def register_user(payload: UserCreate, db: Session = Depends(get_db)):
@@ -96,34 +136,10 @@ def login_user(payload: LoginRequest, db: Session = Depends(get_db)):
     access_token = create_access_token({"sub": user.username})
     return Token(access_token=access_token, token_type="bearer")
 
-def get_current_user(
-    token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db),
-) -> User:
-    payload = decode_access_token(token)
-    username = payload.get("sub")
-
-    if not username:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    user = db.execute(
-        select(User).where(User.username == username)
-    ).scalar_one_or_none()
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Could not validate credentials",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    return user
-
-
 @app.get("/users/me", response_model=UserRead)
 def read_current_user(current_user: User = Depends(get_current_user)):
     return current_user
+
+@app.get("/users/me/restaurants", response_model=list[RestaurantRead])
+def get_user_restaurants(current_user:User = Depends(get_current_user)):
+    return current_user.restaurants

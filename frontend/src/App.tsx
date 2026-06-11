@@ -4,6 +4,7 @@ import { Login } from './pages/auth/login';
 import { Home } from './pages/home';
 import { Register } from './pages/auth/register';
 import { Dashboard } from './pages/user/dashboard';
+import { CreateRestaurant } from './pages/owner/create_restaurant';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard/create_restaurant" element={<CreateRestaurant />} />
       </Routes>
     </BrowserRouter>
   );
