@@ -84,6 +84,32 @@ def create_restaurant(
     db.refresh(restaurant)
     return restaurant
 
+@app.delete("/restaurant/delete/{restaurant_id}", status_code=204)
+def delete_restaurant(restaurant_id:int, db:Session = Depends(get_db), user = Depends(get_current_user)):
+    restaurant = db.execute(
+        select(Restaurant).where(Restaurant.id == restaurant_id)
+    ).scalar_one_or_none()
+
+    if not restaurant:
+        raise HTTPException(
+            status_code=404,
+            detail="Restaurant not found",
+        )
+
+    if restaurant.owner_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not own this restaurant",
+        )
+    
+    db.delete(restaurant)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Restaurant couldn't be deleted")
+
+
 @app.post("/auth/register", response_model=UserRead, status_code=201)
 def register_user(payload: UserCreate, db: Session = Depends(get_db)):
     if payload.password != payload.confirm_password:

@@ -58,6 +58,12 @@ export function Dashboard() {
             <main className="content">
                 <button
                     type="button"
+                    onClick={() => navigate("/")}
+                >
+                    Homepage
+                </button>
+                <button
+                    type="button"
                     onClick={() => navigate("/dashboard/create_restaurant")}
                 >
                     Create a restaurant
@@ -82,6 +88,7 @@ export function Dashboard() {
                                             onClick={() => {
                                                 // later: navigate to `/dashboard/restaurants/${restaurant.id}`
                                                 console.log("Clicked restaurant:", restaurant.id);
+                                                navigate(`/dashboard/owner/restaurants/${restaurant.id}`)
                                             }}
                                         >
                                             {restaurant.restaurant_name}
