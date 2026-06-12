@@ -86,8 +86,23 @@ def get_restaurant_for_user(restaurant_id:int, db:Session = Depends(get_db)):
     return restaurant
 
 @app.get("/restaurant/pending/{restaurant_id}", response_model=list[UserRead])
-def get_pending_list(restaurant_id:int, db:Session = Depends(get_db)):
-    pass
+def get_pending_list(restaurant_id:int, db:Session = Depends(get_db), user:User = Depends(get_current_user)):
+    restaurant = db.execute(
+        select(Restaurant).where(Restaurant.id == restaurant_id)
+    ).scalar_one_or_none()
+
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+
+    if restaurant.owner_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not own this restaurant",
+        )
+    pending_list = db.execute(
+        select(User).join(JoinRequest, JoinRequest.user_id == User.id).where(JoinRequest.restaurant_id == restaurant_id)
+    ).scalars().all()
+    return pending_list
 
 @app.post("/restaurant/create", response_model=RestaurantRead, status_code=201)
 def create_restaurant(
