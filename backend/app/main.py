@@ -54,6 +54,25 @@ def get_current_user(
 
     return user
 
+@app.get("/restaurant/get/{restaurant_id}", response_model=RestaurantRead)
+def get_restaurant(restaurant_id:int, db:Session = Depends(get_db), user:User = Depends(get_current_user)):
+    restaurant = db.execute(
+        select(Restaurant).where(Restaurant.id == restaurant_id)
+    ).scalar_one_or_none()
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    if restaurant.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="You do not own this restaurant")
+
+    return restaurant
+
+@app.get("/restaurant/get/all",response_model=list[RestaurantRead])
+def get_all_restaurants(db:Session = Depends(get_db), user:User = Depends(get_current_user)):
+    restaurants = db.execute(
+        select(Restaurant).where(Restaurant.owner_id != user.id)
+    ).scalars().all()
+    return restaurants
+
 @app.post("/restaurant/create", response_model=RestaurantRead, status_code=201)
 def create_restaurant(
     payload: RestaurantCreate,

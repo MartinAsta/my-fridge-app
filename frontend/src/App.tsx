@@ -5,6 +5,7 @@ import { Home } from './pages/home';
 import { Register } from './pages/auth/register';
 import { Dashboard } from './pages/user/dashboard';
 import { CreateRestaurant } from './pages/owner/create_restaurant';
+import { RestaurantPage } from './pages/restaurant';
 
 function App() {
   return (
@@ -15,6 +16,10 @@ function App() {
         <Route path="/register" element={<Register />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/dashboard/create_restaurant" element={<CreateRestaurant />} />
+        <Route
+          path="/dashboard/owner/restaurants/:restaurantId"
+          element={<RestaurantPage />}
+        />
       </Routes>
     </BrowserRouter>
   );

@@ -86,8 +86,6 @@ export function Dashboard() {
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                // later: navigate to `/dashboard/restaurants/${restaurant.id}`
-                                                console.log("Clicked restaurant:", restaurant.id);
                                                 navigate(`/dashboard/owner/restaurants/${restaurant.id}`)
                                             }}
                                         >
