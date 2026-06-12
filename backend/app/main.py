@@ -8,9 +8,11 @@ from sqlalchemy.orm import Session
 from .database import Base, engine, get_db
 from .models.user_model import User
 from .models.restaurant_model import Restaurant
+from .models.join_request_model import JoinRequest
 from .schemas.user_schema import UserCreate, UserRead
 from .schemas.restaurant_schema import RestaurantCreate,RestaurantRead,RestaurantUpdate
-from .schemas.auth_schema import LoginRequest, Token
+from .schemas.join_request_schema import JoinRequestCreate,JoinRequestRead
+from .schemas.auth_schema import LoginRequest, Token, RestaurantLoginRequest
 from .security import hash_password, verify_password, create_access_token, decode_access_token
 
 Base.metadata.create_all(bind=engine)
@@ -73,6 +75,20 @@ def get_restaurant(restaurant_id:int, db:Session = Depends(get_db), user:User = 
 
     return restaurant
 
+@app.get("/restaurant/user/get/{restaurant_id}", response_model=RestaurantRead)
+def get_restaurant_for_user(restaurant_id:int, db:Session = Depends(get_db)):
+    restaurant = db.execute(
+        select(Restaurant).where(Restaurant.id == restaurant_id)
+    ).scalar_one_or_none()
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+
+    return restaurant
+
+@app.get("/restaurant/pending/{restaurant_id}", response_model=list[UserRead])
+def get_pending_list(restaurant_id:int, db:Session = Depends(get_db)):
+    pass
+
 @app.post("/restaurant/create", response_model=RestaurantRead, status_code=201)
 def create_restaurant(
     payload: RestaurantCreate,
@@ -128,6 +144,44 @@ def delete_restaurant(restaurant_id:int, db:Session = Depends(get_db), user = De
         db.rollback()
         raise HTTPException(status_code=409, detail="Restaurant couldn't be deleted")
 
+@app.post("/restaurant/login/{restaurant_id}")
+def login_restaurant(restaurant_id:int,
+                     payload:RestaurantLoginRequest, 
+                     db:Session = Depends(get_db), 
+                     user:User = Depends(get_current_user)):
+    restaurant = db.execute(
+        select(Restaurant).where(Restaurant.id == restaurant_id)
+    ).scalar_one_or_none()
+
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    if restaurant.owner_id == user.id:
+        raise HTTPException(status_code=400, detail="You already own this restaurant")
+    if not verify_password(payload.password, restaurant.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid restaurant password")
+    existing_request = db.execute(
+        select(JoinRequest).where(
+            JoinRequest.restaurant_id == restaurant_id,
+            JoinRequest.user_id == user.id
+        )
+    ).scalar_one_or_none()
+
+    if existing_request:
+        raise HTTPException(status_code=409, detail="You already applied to this restaurant")
+    
+    join_request = JoinRequest(
+        restaurant_id = restaurant_id,
+        user_id = user.id
+    )
+    db.add(join_request)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Error to create JoinRequest")
+
+    db.refresh(join_request)
+    return join_request
 
 @app.post("/auth/register", response_model=UserRead, status_code=201)
 def register_user(payload: UserCreate, db: Session = Depends(get_db)):
