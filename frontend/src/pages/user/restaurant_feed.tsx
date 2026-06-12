@@ -73,7 +73,7 @@ export function RestaurantFeed() {
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                console.log(restaurant.id);
+                                                navigate(`/restaurants/login/${restaurant.id}`)
                                             }}
                                         >
                                             {restaurant.restaurant_name}

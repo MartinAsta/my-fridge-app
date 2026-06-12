@@ -7,6 +7,7 @@ import { Dashboard } from './pages/user/dashboard';
 import { CreateRestaurant } from './pages/owner/create_restaurant';
 import { RestaurantPage } from './pages/restaurant_page';
 import { RestaurantFeed } from './pages/user/restaurant_feed';
+import { RestaurantLogin } from './pages/user/restaurant_login';
 
 function App() {
   return (
@@ -26,6 +27,8 @@ function App() {
           path="/dashboard/owner/restaurants/:restaurantId" element={<RestaurantPage />} />
         <Route
           path="/restaurants" element={<RestaurantFeed />} />
+        <Route
+          path="/restaurants/login/:restaurantId" element={<RestaurantLogin />} />
       </Routes>
     </BrowserRouter>
   );
