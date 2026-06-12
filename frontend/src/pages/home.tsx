@@ -73,6 +73,12 @@ function AuthButton({
                 <>
                     <button
                         className="login-button"
+                        onClick={() => navigate("/restaurants")}
+                    >   
+                        View restaurants
+                    </button>
+                    <button
+                        className="login-button"
                         onClick={() => navigate("/dashboard")}
                     >
                         Dashboard
