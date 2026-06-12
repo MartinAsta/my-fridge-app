@@ -9,6 +9,8 @@ from .database import Base, engine, get_db
 from .models.user_model import User
 from .models.restaurant_model import Restaurant
 from .models.join_request_model import JoinRequest
+from .models.restaurant_responsible_model import RestaurantResponsible
+from .models.restaurant_waiter_model import RestaurantWaiter
 from .schemas.user_schema import UserCreate, UserRead
 from .schemas.restaurant_schema import RestaurantCreate,RestaurantRead,RestaurantUpdate
 from .schemas.join_request_schema import JoinRequestCreate,JoinRequestRead

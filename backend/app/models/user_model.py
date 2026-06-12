@@ -11,6 +11,8 @@ from ..database import Base
 if TYPE_CHECKING:
     from .restaurant_model import Restaurant
     from .join_request_model import JoinRequest
+    from .restaurant_responsible_model import RestaurantResponsible
+    from .restaurant_waiter_model import RestaurantWaiter
 
 class User(Base):
     __tablename__ = "users"
@@ -32,6 +34,17 @@ class User(Base):
     )
     join_requests: Mapped[list["JoinRequest"]] = relationship(
         "JoinRequest",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+    restaurant_waiters: Mapped[list["RestaurantWaiter"]] = relationship(
+        "RestaurantWaiter",
+        back_populates="user",
+        cascade="all, delete-orphan",
+    )
+
+    restaurant_responsibles: Mapped[list["RestaurantResponsible"]] = relationship(
+        "RestaurantResponsible",
         back_populates="user",
         cascade="all, delete-orphan",
     )
