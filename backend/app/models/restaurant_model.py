@@ -44,13 +44,13 @@ class Restaurant(Base):
         back_populates="restaurant",
         cascade="all, delete-orphan",
     )
-    waiters: Mapped[list["RestaurantWaiter"]] = relationship(
+    restaurant_waiters: Mapped[list["RestaurantWaiter"]] = relationship(
         "RestaurantWaiter",
         back_populates="restaurant",
         cascade="all, delete-orphan",
     )
 
-    responsibles: Mapped[list["RestaurantResponsible"]] = relationship(
+    restaurant_responsibles: Mapped[list["RestaurantResponsible"]] = relationship(
         "RestaurantResponsible",
         back_populates="restaurant",
         cascade="all, delete-orphan",
