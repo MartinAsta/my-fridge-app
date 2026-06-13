@@ -58,6 +58,116 @@ def get_current_user(
 
     return user
 
+@app.get("/waiter/restaurant/get/all", response_model=list[RestaurantRead])
+def get_all_waiter_restaurants(db:Session = Depends(get_db), user:User = Depends(get_current_user)):
+    restaurants = db.execute(
+        select(Restaurant)
+        .join(RestaurantWaiter, RestaurantWaiter.restaurant_id == Restaurant.id)
+        .where(user.id == RestaurantWaiter.user_id)
+    ).scalars().all()
+    return restaurants
+
+@app.get("/responsible/restaurant/get/all", response_model=list[RestaurantRead])
+def get_all_responsible_restaurants(db:Session = Depends(get_db), user:User = Depends(get_current_user)):
+    restaurants = db.execute(
+        select(Restaurant)
+        .join(RestaurantResponsible, RestaurantResponsible.restaurant_id == Restaurant.id)
+        .where(user.id == RestaurantResponsible.user_id)
+    ).scalars().all()
+    return restaurants
+
+@app.post("/waiter/add/{restaurant_id}/{user_id}", status_code=201)
+def add_waiter_to_restaurant(restaurant_id:int, 
+                             user_id:int, 
+                             db:Session = Depends(get_db), 
+                             user:User = Depends(get_current_user)):
+    restaurant = db.execute(
+        select(Restaurant).where(restaurant_id == Restaurant.id)
+    ).scalar_one_or_none()
+
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    if restaurant.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="You do not own this restaurant")
+    
+    target_user = db.execute(
+        select(User).where(user_id == User.id)
+    ).scalar_one_or_none()
+
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    join_request = db.execute(
+        select(JoinRequest).where(JoinRequest.user_id == user_id,
+                                  JoinRequest.restaurant_id == restaurant_id)
+    ).scalar_one_or_none()
+
+    if not join_request:
+        raise HTTPException(status_code=404, detail="Join request not found")
+    
+    waiter = RestaurantWaiter(
+        restaurant_id = restaurant_id,
+        user_id = user_id
+    )
+
+    db.add(waiter)
+    db.delete(join_request)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Could not add waiter")
+
+    db.refresh(waiter)
+    return waiter
+
+@app.post("/responsible/add/{restaurant_id}/{user_id}", status_code=201)
+def add_responsible_to_restaurant(restaurant_id:int, 
+                             user_id:int, 
+                             db:Session = Depends(get_db), 
+                             user:User = Depends(get_current_user)):
+    restaurant = db.execute(
+        select(Restaurant).where(restaurant_id == Restaurant.id)
+    ).scalar_one_or_none()
+
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    if restaurant.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="You do not own this restaurant")
+    
+    target_user = db.execute(
+        select(User).where(user_id == User.id)
+    ).scalar_one_or_none()
+
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    join_request = db.execute(
+        select(JoinRequest).where(JoinRequest.user_id == user_id,
+                                  JoinRequest.restaurant_id == restaurant_id)
+    ).scalar_one_or_none()
+
+    if not join_request:
+        raise HTTPException(status_code=404, detail="Join request not found")
+    
+    responsible = RestaurantResponsible(
+        restaurant_id = restaurant_id,
+        user_id = user_id
+    )
+
+    db.add(responsible)
+    db.delete(join_request)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Could not add responsible")
+
+    db.refresh(responsible)
+    return responsible
+
 @app.get("/restaurant/get/all",response_model=list[RestaurantRead])
 def get_all_restaurants(db:Session = Depends(get_db), user:User = Depends(get_current_user)):
     restaurants = db.execute(
