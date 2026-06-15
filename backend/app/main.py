@@ -58,6 +58,16 @@ def get_current_user(
 
     return user
 
+#def get_restaurant_or_404(db: Session, restaurant_id: int) -> Restaurant:
+#    restaurant = db.execute(
+#        select(Restaurant).where(Restaurant.id == restaurant_id)
+#    ).scalar_one_or_none()
+
+    #if not restaurant:
+        #raise HTTPException(status_code=404, detail="Restaurant not found")
+#
+    #return restaurant
+
 @app.get("/waiter/restaurant/get/all", response_model=list[RestaurantRead])
 def get_all_waiter_restaurants(db:Session = Depends(get_db), user:User = Depends(get_current_user)):
     restaurants = db.execute(
@@ -167,6 +177,40 @@ def add_responsible_to_restaurant(restaurant_id:int,
 
     db.refresh(responsible)
     return responsible
+
+@app.delete("/deny/restaurantaccess/{restaurant_id}/{user_id}", status_code=204)
+def deny_restaurant_access(restaurant_id:int, 
+                           user_id:int, 
+                           db:Session = Depends(get_db),
+                           user: User = Depends(get_current_user)):
+    target_user = db.execute(
+        select(User).where(user_id == User.id)
+    ).scalar_one_or_none()
+
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    join_request = db.execute(
+        select(JoinRequest).where(JoinRequest.user_id == user_id,
+                                  JoinRequest.restaurant_id == restaurant_id)
+    ).scalar_one_or_none()
+
+    if not join_request:
+        raise HTTPException(status_code=404, detail="Join request not found")
+    
+    restaurant = db.execute(
+        select(Restaurant).where(restaurant_id == Restaurant.id)
+    ).scalar_one_or_none()
+
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+    
+    db.delete(join_request)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Join request couldn't be deleted")
 
 @app.get("/restaurant/get/all",response_model=list[RestaurantRead])
 def get_all_restaurants(db:Session = Depends(get_db), user:User = Depends(get_current_user)):
