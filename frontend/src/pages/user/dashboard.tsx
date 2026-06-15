@@ -116,52 +116,56 @@ export function Dashboard() {
                     <>
                         <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
                             <div>
-                                <h2>Your restaurants</h2>
-                                {restaurants.length === 0 ? (
-                                    <span>You do not own any restaurant yet.</span>
-                                ) : (
-                                    <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
-                                        {restaurants.map((restaurant) => (
-                                            <li key={restaurant.id} style={{ marginBottom: "0.75rem" }}>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => navigate(`/dashboard/owner/restaurants/${restaurant.id}`)}
-                                                >
-                                                    {restaurant.restaurant_name}
-                                                </button>
-                                            </li>
-                                        ))}
-                                    </ul>
+                                {restaurants.length === 0 ? (null) : (
+                                    <>
+                                        <h2>Your restaurants</h2>
+                                        <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+                                            {restaurants.map((restaurant) => (
+                                                <li key={restaurant.id} style={{ marginBottom: "0.75rem" }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => navigate(`/dashboard/owner/restaurants/${restaurant.id}`)}
+                                                    >
+                                                        {restaurant.restaurant_name}
+                                                    </button>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </>
                                 )}
                             </div>
 
                             <div>
-                                <h2>Restaurants where you are waiter</h2>
                                 {restaurantsWaiter.length === 0 ? (
-                                    <span>You do not work as a waiter in any restaurant yet.</span>
+                                    null
                                 ) : (
-                                    <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
-                                        {restaurantsWaiter.map((restaurant) => (
-                                            <li key={restaurant.id} style={{ marginBottom: "0.75rem" }}>
-                                                <span>{restaurant.restaurant_name}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
+                                    <>
+                                        <h2>Restaurants where you are waiter</h2>
+                                        <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+                                            {restaurantsWaiter.map((restaurant) => (
+                                                <li key={restaurant.id} style={{ marginBottom: "0.75rem" }}>
+                                                    <span>{restaurant.restaurant_name}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </>
                                 )}
                             </div>
 
                             <div>
-                                <h2>Restaurants where you are responsible</h2>
                                 {restaurantsResponsible.length === 0 ? (
-                                    <span>You do not work as a responsible in any restaurant yet.</span>
+                                    null
                                 ) : (
-                                    <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
-                                        {restaurantsResponsible.map((restaurant) => (
-                                            <li key={restaurant.id} style={{ marginBottom: "0.75rem" }}>
-                                                <span>{restaurant.restaurant_name}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
+                                    <>
+                                        <h2>Restaurants where you are responsible</h2>
+                                        <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+                                            {restaurantsResponsible.map((restaurant) => (
+                                                <li key={restaurant.id} style={{ marginBottom: "0.75rem" }}>
+                                                    <span>{restaurant.restaurant_name}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </>
                                 )}
                             </div>
                             <div>
