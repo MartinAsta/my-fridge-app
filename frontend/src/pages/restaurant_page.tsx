@@ -26,6 +26,7 @@ export function RestaurantPage() {
     const [deleting, setDeleting] = useState(false);
     const [addingWaiter, setAddingWaiter] = useState(false);
     const [addingResponsible, setAddingResponsible] = useState(false);
+    const [deletingUser, setDeletingUser] = useState(false);
 
     const API_URL = import.meta.env.VITE_API_URL;
 
@@ -130,7 +131,7 @@ export function RestaurantPage() {
                 {
                     method: "POST",
                     headers: {
-                        Authorization: `Bearer ${token}`,
+                        Authorization: `Bearer ${token}`
                     }
                 }
             );
@@ -143,6 +144,40 @@ export function RestaurantPage() {
             setError(err instanceof Error ? err.message : "Could not add to responsibles");
         } finally {
             setDeleting(false);
+        }
+    }
+
+    const handleDeleteUser = async (user_id: number) => {
+        const token = localStorage.getItem("access_token");
+        if (!token || !restaurantId) {
+            setError("Missing restaurant or authentication");
+            return;
+        }
+        const confirmed = window.confirm("Are you sure you want to deny entrance to this user ?");
+        if (!confirmed) {
+            return;
+        }
+        setDeletingUser(true);
+        setError("");
+        try {
+            const response = await fetch(
+                `${API_URL}/deny/restaurantaccess/${restaurantId}/${user_id}`,
+                {
+                    method: "DELETE",
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            );
+            if(!response.ok){
+                const data = await response.json();
+                throw new Error(data.detail || "Could not delete this user");
+            }
+            navigate("/dashboard");
+        } catch(err) {
+            setError(err instanceof Error ? err.message : "Could not delete this user");
+        } finally {
+            setDeletingUser(false);
         }
     }
 
@@ -212,6 +247,9 @@ export function RestaurantPage() {
                             </button>
                             <button type="button" onClick={() => handleAddResponsible(user.id)} disabled={addingResponsible}>
                                 {addingResponsible ? "Adding responsible..." : "Responsible"}
+                            </button>
+                            <button type="button" onClick={() => handleDeleteUser(user.id)} disabled={deletingUser}>
+                                {deletingUser ? "Deleting user..." : "Deny"}
                             </button>
                         </li>
                     ))}
