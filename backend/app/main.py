@@ -95,6 +95,15 @@ def get_all_responsible_restaurants(db:Session = Depends(get_db), user:User = De
     ).scalars().all()
     return restaurants
 
+@app.get("/pending/restaurants/get", response_model=list[RestaurantRead])
+def get_all_pending_restaurants(db:Session = Depends(get_db), user:User = Depends(get_current_user)):
+    restaurants = db.execute(
+        select(Restaurant)
+        .join(JoinRequest, JoinRequest.restaurant_id == Restaurant.id)
+        .where(JoinRequest.user_id == user.id)
+    ).scalars().all()
+    return restaurants
+
 @app.post("/waiter/add/{restaurant_id}/{user_id}", status_code=201)
 def add_waiter_to_restaurant(restaurant_id:int, 
                              user_id:int, 

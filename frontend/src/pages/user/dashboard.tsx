@@ -13,6 +13,7 @@ export function Dashboard() {
     const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
     const [restaurantsWaiter, setRestaurantsWaiter] = useState<Restaurant[]>([]);
     const [restaurantsResponsible, setRestaurantsResponsible] = useState<Restaurant[]>([]);
+    const [restaurantsPending, setRestaurantPending] = useState<Restaurant[]>([]);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(true);
     const API_URL = import.meta.env.VITE_API_URL;
@@ -31,27 +32,34 @@ export function Dashboard() {
                     ownedResponse,
                     waiterResponse,
                     responsibleResponse,
+                    pendingResponse // /pending/restaurants/get
                 ] = await Promise.all([
                     fetch(`${API_URL}/users/me/restaurants`, {
                         headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
+                            Authorization: `Bearer ${token}`
+                        }
                     }),
                     fetch(`${API_URL}/waiter/restaurant/get/all`, {
                         headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
+                            Authorization: `Bearer ${token}`
+                        }
                     }),
                     fetch(`${API_URL}/responsible/restaurant/get/all`, {
                         headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
+                            Authorization: `Bearer ${token}`
+                        }
                     }),
+                    fetch(`${API_URL}/pending/restaurants/get`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    })
                 ]);
 
                 const ownedData = await ownedResponse.json();
                 const waiterData = await waiterResponse.json();
                 const responsibleData = await responsibleResponse.json();
+                const pendingData = await pendingResponse.json();
 
                 if (!ownedResponse.ok) {
                     localStorage.removeItem("access_token");
@@ -67,16 +75,20 @@ export function Dashboard() {
                     throw new Error(responsibleData.detail || "Could not load responsible restaurants");
                 }
 
+                if (!pendingResponse.ok) {
+                    throw new Error(pendingData.detail || "Could not load waiting list");
+                }
+
                 setRestaurants(ownedData);
                 setRestaurantsWaiter(waiterData);
                 setRestaurantsResponsible(responsibleData);
+                setRestaurantPending(pendingData);
             } catch {
                 setError("Could not load dashboard");
             } finally {
                 setLoading(false);
             }
         };
-
         loadDashboard();
     }, [API_URL, navigate]);
 
@@ -150,6 +162,22 @@ export function Dashboard() {
                                             </li>
                                         ))}
                                     </ul>
+                                )}
+                            </div>
+                            <div>
+                                {restaurantsPending.length === 0 ? (
+                                    null
+                                ) : (
+                                    <>
+                                        <h2>Waiting list</h2>
+                                        <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+                                            {restaurantsPending.map((restaurant) => (
+                                                <li key={restaurant.id} style={{ marginBottom: "0.75rem" }}>
+                                                    <span>{restaurant.restaurant_name}</span>
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    </>
                                 )}
                             </div>
                         </div>
