@@ -58,15 +58,24 @@ def get_current_user(
 
     return user
 
-#def get_restaurant_or_404(db: Session, restaurant_id: int) -> Restaurant:
-#    restaurant = db.execute(
-#        select(Restaurant).where(Restaurant.id == restaurant_id)
-#    ).scalar_one_or_none()
+def get_restaurant_or_404(db: Session, restaurant_id: int) -> Restaurant:
+    restaurant = db.execute(
+        select(Restaurant).where(Restaurant.id == restaurant_id)
+    ).scalar_one_or_none()
 
-    #if not restaurant:
-        #raise HTTPException(status_code=404, detail="Restaurant not found")
-#
-    #return restaurant
+    if not restaurant:
+        raise HTTPException(status_code=404, detail="Restaurant not found")
+
+    return restaurant
+
+def get_target_user_or_404(db: Session, target_user_id:int) -> User:
+    target_user = db.execute(
+        select(User).where(User.id == target_user_id)
+    ).scalar_one_or_none()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return target_user
 
 @app.get("/waiter/restaurant/get/all", response_model=list[RestaurantRead])
 def get_all_waiter_restaurants(db:Session = Depends(get_db), user:User = Depends(get_current_user)):
@@ -91,21 +100,12 @@ def add_waiter_to_restaurant(restaurant_id:int,
                              user_id:int, 
                              db:Session = Depends(get_db), 
                              user:User = Depends(get_current_user)):
-    restaurant = db.execute(
-        select(Restaurant).where(restaurant_id == Restaurant.id)
-    ).scalar_one_or_none()
+    restaurant = get_restaurant_or_404(db, restaurant_id)
 
-    if not restaurant:
-        raise HTTPException(status_code=404, detail="Restaurant not found")
     if restaurant.owner_id != user.id:
         raise HTTPException(status_code=403, detail="You do not own this restaurant")
     
-    target_user = db.execute(
-        select(User).where(user_id == User.id)
-    ).scalar_one_or_none()
-
-    if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
+    target_user = get_target_user_or_404(db, user_id)
 
     join_request = db.execute(
         select(JoinRequest).where(JoinRequest.user_id == user_id,
@@ -137,21 +137,12 @@ def add_responsible_to_restaurant(restaurant_id:int,
                              user_id:int, 
                              db:Session = Depends(get_db), 
                              user:User = Depends(get_current_user)):
-    restaurant = db.execute(
-        select(Restaurant).where(restaurant_id == Restaurant.id)
-    ).scalar_one_or_none()
+    restaurant = get_restaurant_or_404(db, restaurant_id)
 
-    if not restaurant:
-        raise HTTPException(status_code=404, detail="Restaurant not found")
     if restaurant.owner_id != user.id:
         raise HTTPException(status_code=403, detail="You do not own this restaurant")
     
-    target_user = db.execute(
-        select(User).where(user_id == User.id)
-    ).scalar_one_or_none()
-
-    if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
+    target_user = get_target_user_or_404(db, user_id)
 
     join_request = db.execute(
         select(JoinRequest).where(JoinRequest.user_id == user_id,
@@ -183,12 +174,7 @@ def deny_restaurant_access(restaurant_id:int,
                            user_id:int, 
                            db:Session = Depends(get_db),
                            user: User = Depends(get_current_user)):
-    target_user = db.execute(
-        select(User).where(user_id == User.id)
-    ).scalar_one_or_none()
-
-    if not target_user:
-        raise HTTPException(status_code=404, detail="User not found")
+    target_user = get_target_user_or_404(db, user_id)
 
     join_request = db.execute(
         select(JoinRequest).where(JoinRequest.user_id == user_id,
@@ -198,12 +184,7 @@ def deny_restaurant_access(restaurant_id:int,
     if not join_request:
         raise HTTPException(status_code=404, detail="Join request not found")
     
-    restaurant = db.execute(
-        select(Restaurant).where(restaurant_id == Restaurant.id)
-    ).scalar_one_or_none()
-
-    if not restaurant:
-        raise HTTPException(status_code=404, detail="Restaurant not found")
+    restaurant = get_restaurant_or_404(db, restaurant_id)
     
     db.delete(join_request)
     try:
@@ -221,11 +202,8 @@ def get_all_restaurants(db:Session = Depends(get_db), user:User = Depends(get_cu
 
 @app.get("/restaurant/get/{restaurant_id}", response_model=RestaurantRead)
 def get_restaurant(restaurant_id:int, db:Session = Depends(get_db), user:User = Depends(get_current_user)):
-    restaurant = db.execute(
-        select(Restaurant).where(Restaurant.id == restaurant_id)
-    ).scalar_one_or_none()
-    if not restaurant:
-        raise HTTPException(status_code=404, detail="Restaurant not found")
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+
     if restaurant.owner_id != user.id:
         raise HTTPException(status_code=403, detail="You do not own this restaurant")
 
@@ -233,22 +211,13 @@ def get_restaurant(restaurant_id:int, db:Session = Depends(get_db), user:User = 
 
 @app.get("/restaurant/user/get/{restaurant_id}", response_model=RestaurantRead)
 def get_restaurant_for_user(restaurant_id:int, db:Session = Depends(get_db)):
-    restaurant = db.execute(
-        select(Restaurant).where(Restaurant.id == restaurant_id)
-    ).scalar_one_or_none()
-    if not restaurant:
-        raise HTTPException(status_code=404, detail="Restaurant not found")
+    restaurant = get_restaurant_or_404(db, restaurant_id)
 
     return restaurant
 
 @app.get("/restaurant/pending/{restaurant_id}", response_model=list[UserRead])
 def get_pending_list(restaurant_id:int, db:Session = Depends(get_db), user:User = Depends(get_current_user)):
-    restaurant = db.execute(
-        select(Restaurant).where(Restaurant.id == restaurant_id)
-    ).scalar_one_or_none()
-
-    if not restaurant:
-        raise HTTPException(status_code=404, detail="Restaurant not found")
+    restaurant = get_restaurant_or_404(db, restaurant_id)
 
     if restaurant.owner_id != user.id:
         raise HTTPException(
@@ -292,15 +261,7 @@ def create_restaurant(
 
 @app.delete("/restaurant/delete/{restaurant_id}", status_code=204)
 def delete_restaurant(restaurant_id:int, db:Session = Depends(get_db), user = Depends(get_current_user)):
-    restaurant = db.execute(
-        select(Restaurant).where(Restaurant.id == restaurant_id)
-    ).scalar_one_or_none()
-
-    if not restaurant:
-        raise HTTPException(
-            status_code=404,
-            detail="Restaurant not found",
-        )
+    restaurant = get_restaurant_or_404(db, restaurant_id)
 
     if restaurant.owner_id != user.id:
         raise HTTPException(
@@ -320,12 +281,8 @@ def login_restaurant(restaurant_id:int,
                      payload:RestaurantLoginRequest, 
                      db:Session = Depends(get_db), 
                      user:User = Depends(get_current_user)):
-    restaurant = db.execute(
-        select(Restaurant).where(Restaurant.id == restaurant_id)
-    ).scalar_one_or_none()
+    restaurant = get_restaurant_or_404(db, restaurant_id)
 
-    if not restaurant:
-        raise HTTPException(status_code=404, detail="Restaurant not found")
     if restaurant.owner_id == user.id:
         raise HTTPException(status_code=400, detail="You already own this restaurant")
     if not verify_password(payload.password, restaurant.password_hash):
