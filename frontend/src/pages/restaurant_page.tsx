@@ -24,6 +24,7 @@ export function RestaurantPage() {
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(true);
     const [deleting, setDeleting] = useState(false);
+    const [addingWaiter, setAddingWaiter] = useState(false);
 
     const API_URL = import.meta.env.VITE_API_URL;
 
@@ -74,6 +75,43 @@ export function RestaurantPage() {
         loadRestaurant();
     }, [API_URL, restaurantId]);
 
+    const handleAddWaiter = async (user_id: number) => {
+        const token = localStorage.getItem("access_token");
+
+        if (!token || !restaurantId) {
+            setError("Missing restaurant or authentication");
+            return;
+        }
+        const confirmed = window.confirm("Are you sure you want to add this user as a waiter ?")
+        if (!confirmed) {
+            return;
+        }
+        setAddingWaiter(true);
+        setError("");
+
+        try {
+            const response = await fetch(
+                `${API_URL}/waiter/add/${restaurantId}/${user_id}`,
+                {
+                    method: "POST",
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                    }
+                }
+            );
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.detail || "Could not add to waiters");
+            }
+            navigate("/dashboard");
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Could not add to waiters");
+        } finally {
+            setDeleting(false);
+
+        }
+    };
+
     const handleDelete = async () => {
         const token = localStorage.getItem("access_token");
 
@@ -82,7 +120,7 @@ export function RestaurantPage() {
             return;
         }
 
-        const confirmed = window.confirm("Are you sure you want to delete this restaurant?");
+        const confirmed = window.confirm("Are you sure you want to delete this restaurant ?");
         if (!confirmed) {
             return;
         }
@@ -97,7 +135,7 @@ export function RestaurantPage() {
                     method: "DELETE",
                     headers: {
                         Authorization: `Bearer ${token}`,
-                    },
+                    }
                 }
             );
 
@@ -137,6 +175,9 @@ export function RestaurantPage() {
                             <p>
                                 {user.username}
                             </p>
+                            <button type="button" onClick={() => handleAddWaiter(user.id)} disabled={addingWaiter}>
+                                {addingWaiter ? "Adding waiter..." : "Waiter"}
+                            </button>
                         </li>
                     ))}
                 </ul>
