@@ -106,12 +106,16 @@ def add_waiter_to_restaurant(restaurant_id:int,
         raise HTTPException(status_code=403, detail="You do not own this restaurant")
     
     target_user = get_target_user_or_404(db, user_id)
-
+    already_exists = db.execute(
+        select(RestaurantWaiter).where(RestaurantWaiter.restaurant_id == restaurant_id,
+                                       RestaurantWaiter.user_id == user_id)
+    ).scalar_one_or_none()
+    if already_exists:
+        raise HTTPException(status_code=409, detail="User already works here")
     join_request = db.execute(
         select(JoinRequest).where(JoinRequest.user_id == user_id,
                                   JoinRequest.restaurant_id == restaurant_id)
     ).scalar_one_or_none()
-
     if not join_request:
         raise HTTPException(status_code=404, detail="Join request not found")
     
@@ -143,7 +147,12 @@ def add_responsible_to_restaurant(restaurant_id:int,
         raise HTTPException(status_code=403, detail="You do not own this restaurant")
     
     target_user = get_target_user_or_404(db, user_id)
-
+    already_exists = db.execute(
+        select(RestaurantResponsible).where(RestaurantResponsible.restaurant_id == restaurant_id,
+                                       RestaurantResponsible.user_id == user_id)
+    ).scalar_one_or_none()
+    if already_exists:
+        raise HTTPException(status_code=409, detail="User already works here")
     join_request = db.execute(
         select(JoinRequest).where(JoinRequest.user_id == user_id,
                                   JoinRequest.restaurant_id == restaurant_id)

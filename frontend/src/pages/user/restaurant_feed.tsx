@@ -25,16 +25,28 @@ export function RestaurantFeed() {
 
         const loadRestaurantFeed = async () => {
             try {
-                const restaurantsResponse = await fetch(
-                    `${API_URL}/restaurant/get/all`,
-                    {
-                        headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
-                    }
-                );
+                const [restaurantsResponse, waiterResponse, responsibleResponse] =
+                    await Promise.all([
+                        fetch(`${API_URL}/restaurant/get/all`, {
+                            headers: {
+                                Authorization: `Bearer ${token}`
+                            },
+                        }),
+                        fetch(`${API_URL}/waiter/restaurant/get/all`, {
+                            headers: {
+                                Authorization: `Bearer ${token}`
+                            },
+                        }),
+                        fetch(`${API_URL}/responsible/restaurant/get/all`, {
+                            headers: {
+                                Authorization: `Bearer ${token}`
+                            },
+                        }),
+                    ]);
 
-                const data = await restaurantsResponse.json();
+                const restaurantsData = await restaurantsResponse.json();
+                const waiterData = await waiterResponse.json();
+                const responsibleData = await responsibleResponse.json();
 
                 if (!restaurantsResponse.ok) {
                     localStorage.removeItem("access_token");
@@ -42,7 +54,24 @@ export function RestaurantFeed() {
                     return;
                 }
 
-                setRestaurants(data);
+                if (!waiterResponse.ok) {
+                    throw new Error(waiterData.detail || "Could not load waiter restaurants");
+                }
+
+                if (!responsibleResponse.ok) {
+                    throw new Error(responsibleData.detail || "Could not load responsible restaurants");
+                }
+
+                const excludedIds = new Set<number>([
+                    ...waiterData.map((restaurant: Restaurant) => restaurant.id),
+                    ...responsibleData.map((restaurant: Restaurant) => restaurant.id),
+                ]);
+
+                setRestaurants(
+                    restaurantsData.filter(
+                        (restaurant: Restaurant) => !excludedIds.has(restaurant.id)
+                    )
+                );
             } catch {
                 setError("Could not load restaurants feed");
             } finally {
@@ -73,7 +102,7 @@ export function RestaurantFeed() {
                                         <button
                                             type="button"
                                             onClick={() => {
-                                                navigate(`/restaurants/login/${restaurant.id}`)
+                                                navigate(`/restaurants/login/${restaurant.id}`);
                                             }}
                                         >
                                             {restaurant.restaurant_name}

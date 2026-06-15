@@ -11,6 +11,8 @@ type Restaurant = {
 export function Dashboard() {
     const navigate = useNavigate();
     const [restaurants, setRestaurants] = useState<Restaurant[]>([]);
+    const [restaurantsWaiter, setRestaurantsWaiter] = useState<Restaurant[]>([]);
+    const [restaurantsResponsible, setRestaurantsResponsible] = useState<Restaurant[]>([]);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(true);
     const API_URL = import.meta.env.VITE_API_URL;
@@ -25,24 +27,49 @@ export function Dashboard() {
 
         const loadDashboard = async () => {
             try {
-                const restaurantsResponse = await fetch(
-                    `${API_URL}/users/me/restaurants`,
-                    {
+                const [
+                    ownedResponse,
+                    waiterResponse,
+                    responsibleResponse,
+                ] = await Promise.all([
+                    fetch(`${API_URL}/users/me/restaurants`, {
                         headers: {
                             Authorization: `Bearer ${token}`,
                         },
-                    }
-                );
+                    }),
+                    fetch(`${API_URL}/waiter/restaurant/get/all`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    }),
+                    fetch(`${API_URL}/responsible/restaurant/get/all`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`,
+                        },
+                    }),
+                ]);
 
-                const restaurantsData = await restaurantsResponse.json();
+                const ownedData = await ownedResponse.json();
+                const waiterData = await waiterResponse.json();
+                const responsibleData = await responsibleResponse.json();
 
-                if (!restaurantsResponse.ok) {
+                if (!ownedResponse.ok) {
                     localStorage.removeItem("access_token");
                     navigate("/login");
                     return;
                 }
 
-                setRestaurants(restaurantsData);
+                if (!waiterResponse.ok) {
+                    throw new Error(waiterData.detail || "Could not load waiter restaurants");
+                }
+
+                if (!responsibleResponse.ok) {
+                    throw new Error(responsibleData.detail || "Could not load responsible restaurants");
+                }
+
+                setRestaurants(ownedData);
+                setRestaurantsWaiter(waiterData);
+                setRestaurantsResponsible(responsibleData);
             } catch {
                 setError("Could not load dashboard");
             } finally {
@@ -75,26 +102,57 @@ export function Dashboard() {
                     <p>Loading...</p>
                 ) : (
                     <>
-                        <h2>Your restaurants</h2>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                            <div>
+                                <h2>Your restaurants</h2>
+                                {restaurants.length === 0 ? (
+                                    <span>You do not own any restaurant yet.</span>
+                                ) : (
+                                    <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+                                        {restaurants.map((restaurant) => (
+                                            <li key={restaurant.id} style={{ marginBottom: "0.75rem" }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => navigate(`/dashboard/owner/restaurants/${restaurant.id}`)}
+                                                >
+                                                    {restaurant.restaurant_name}
+                                                </button>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
 
-                        {restaurants.length === 0 ? (
-                            <p>You do not own any restaurant yet.</p>
-                        ) : (
-                            <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
-                                {restaurants.map((restaurant) => (
-                                    <li key={restaurant.id} style={{ marginBottom: "0.75rem" }}>
-                                        <button
-                                            type="button"
-                                            onClick={() => {
-                                                navigate(`/dashboard/owner/restaurants/${restaurant.id}`)
-                                            }}
-                                        >
-                                            {restaurant.restaurant_name}
-                                        </button>
-                                    </li>
-                                ))}
-                            </ul>
-                        )}
+                            <div>
+                                <h2>Restaurants where you are waiter</h2>
+                                {restaurantsWaiter.length === 0 ? (
+                                    <span>You do not work as a waiter in any restaurant yet.</span>
+                                ) : (
+                                    <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+                                        {restaurantsWaiter.map((restaurant) => (
+                                            <li key={restaurant.id} style={{ marginBottom: "0.75rem" }}>
+                                                <span>{restaurant.restaurant_name}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+
+                            <div>
+                                <h2>Restaurants where you are responsible</h2>
+                                {restaurantsResponsible.length === 0 ? (
+                                    <span>You do not work as a responsible in any restaurant yet.</span>
+                                ) : (
+                                    <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+                                        {restaurantsResponsible.map((restaurant) => (
+                                            <li key={restaurant.id} style={{ marginBottom: "0.75rem" }}>
+                                                <span>{restaurant.restaurant_name}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </div>
+                        </div>
                     </>
                 )}
             </main>
