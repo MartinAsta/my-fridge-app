@@ -5,7 +5,7 @@ import { Home } from './pages/home';
 import { Register } from './pages/auth/register';
 import { Dashboard } from './pages/user/dashboard';
 import { CreateRestaurant } from './pages/owner/create_restaurant';
-import { RestaurantPage } from './pages/restaurant_page';
+import { RestaurantPage } from './pages/owner/restaurant_page';
 import { RestaurantFeed } from './pages/user/restaurant_feed';
 import { RestaurantLogin } from './pages/user/restaurant_login';
 
