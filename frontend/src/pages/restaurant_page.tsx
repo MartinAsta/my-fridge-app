@@ -298,6 +298,9 @@ export function RestaurantPage() {
 
     return (
         <div>
+            <button onClick={() => navigate("/dashboard")}>
+                Dashboard
+            </button>
             <h1>{restaurant.restaurant_name}</h1>
 
             <button type="button" onClick={handleDelete} disabled={deleting}>

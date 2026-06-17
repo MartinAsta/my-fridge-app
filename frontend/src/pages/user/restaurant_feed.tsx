@@ -86,7 +86,9 @@ export function RestaurantFeed() {
         <div>
             <main className="content">
                 {error && <p>{error}</p>}
-
+                <button onClick={() => navigate("/")}>
+                    Homepage
+                </button>
                 {loading ? (
                     <p>Loading...</p>
                 ) : (
