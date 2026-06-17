@@ -192,6 +192,9 @@ def deny_restaurant_access(restaurant_id:int,
                            user_id:int, 
                            db:Session = Depends(get_db),
                            user: User = Depends(get_current_user)):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    if restaurant.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="You do not own this restaurant")
     target_user = get_target_user_or_404(db, user_id)
 
     join_request = db.execute(
@@ -202,14 +205,58 @@ def deny_restaurant_access(restaurant_id:int,
     if not join_request:
         raise HTTPException(status_code=404, detail="Join request not found")
     
-    restaurant = get_restaurant_or_404(db, restaurant_id)
-    
     db.delete(join_request)
     try:
         db.commit()
     except IntegrityError:
         db.rollback()
         raise HTTPException(status_code=409, detail="Join request couldn't be deleted")
+
+@app.delete("/delete/waiter/{restaurant_id}/{user_id}", status_code=204)
+def remove_waiter_from_restaurant(restaurant_id:int,
+                                  user_id:int,
+                                  db:Session = Depends(get_db),
+                                  user:User = Depends(get_current_user)):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    if restaurant.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="You do not own this restaurant")
+    target_user = get_target_user_or_404(db, user_id)
+    waiter = db.execute(
+        select(RestaurantWaiter).where(RestaurantWaiter.user_id == user_id,
+                                       RestaurantWaiter.restaurant_id == restaurant_id)
+    ).scalar_one_or_none()
+    if not waiter:
+        raise HTTPException(status_code=404, detail="Waiter not found")
+    
+    db.delete(waiter)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Waiter couldn't be deleted")
+
+@app.delete("/delete/responsible/{restaurant_id}/{user_id}", status_code=204)
+def remove_responsible_from_restaurant(restaurant_id:int,
+                                  user_id:int,
+                                  db:Session = Depends(get_db),
+                                  user:User = Depends(get_current_user)):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    if restaurant.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="You do not own this restaurant")
+    target_user = get_target_user_or_404(db, user_id)
+    responsible = db.execute(
+        select(RestaurantResponsible).where(RestaurantResponsible.user_id == user_id,
+                                            RestaurantResponsible.restaurant_id == restaurant_id)
+    ).scalar_one_or_none()
+    if not responsible:
+        raise HTTPException(status_code=404, detail="Responsible not found")
+    
+    db.delete(responsible)
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Responsible couldn't be deleted")
 
 @app.get("/restaurant/get/all",response_model=list[RestaurantRead])
 def get_all_restaurants(db:Session = Depends(get_db), user:User = Depends(get_current_user)):

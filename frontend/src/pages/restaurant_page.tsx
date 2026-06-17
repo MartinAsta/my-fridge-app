@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 type Restaurant = {
@@ -29,10 +29,12 @@ export function RestaurantPage() {
     const [addingWaiter, setAddingWaiter] = useState(false);
     const [addingResponsible, setAddingResponsible] = useState(false);
     const [deletingUser, setDeletingUser] = useState(false);
+    const [deletingWaiter, setDeletingWaiter] = useState(false);
+    const [deletingResponsible, setDeletingResponsible] = useState(false);
 
     const API_URL = import.meta.env.VITE_API_URL;
 
-    useEffect(() => {
+    const loadRestaurant = useCallback(async () => {
         const token = localStorage.getItem("access_token");
 
         if (!token || !restaurantId) {
@@ -41,65 +43,48 @@ export function RestaurantPage() {
             return;
         }
 
-        const loadRestaurant = async () => {
-            try {
-                const [restaurantResponse, pendingResponse, waiterResponse, responsibleResponse] = await Promise.all([
-                    fetch(`${API_URL}/restaurant/get/${restaurantId}`, {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
-                    }),
-                    fetch(`${API_URL}/restaurant/pending/${restaurantId}`, {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
-                    }),
-                    fetch(`${API_URL}/get/waiters/${restaurantId}`, {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
-                    }),
-                    fetch(`${API_URL}/get/responsibles/${restaurantId}`, {
-                        headers: {
-                            Authorization: `Bearer ${token}`
-                        }
-                    })
-                ]);
+        try {
+            setLoading(true);
 
-                const restaurantData = await restaurantResponse.json();
-                const pendingData = await pendingResponse.json();
-                const waiterData = await waiterResponse.json();
-                const responsibleData = await responsibleResponse.json();
+            const [restaurantResponse, pendingResponse, waiterResponse, responsibleResponse] = await Promise.all([
+                fetch(`${API_URL}/restaurant/get/${restaurantId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                }),
+                fetch(`${API_URL}/restaurant/pending/${restaurantId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                }),
+                fetch(`${API_URL}/get/waiters/${restaurantId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                }),
+                fetch(`${API_URL}/get/responsibles/${restaurantId}`, {
+                    headers: { Authorization: `Bearer ${token}` },
+                }),
+            ]);
 
-                if (!restaurantResponse.ok) {
-                    throw new Error(restaurantData.detail || "Could not load restaurant");
-                }
+            const restaurantData = await restaurantResponse.json();
+            const pendingData = await pendingResponse.json();
+            const waiterData = await waiterResponse.json();
+            const responsibleData = await responsibleResponse.json();
 
-                if (!pendingResponse.ok) {
-                    throw new Error(pendingData.detail || "Could not load pending list");
-                }
+            if (!restaurantResponse.ok) throw new Error(restaurantData.detail || "Could not load restaurant");
+            if (!pendingResponse.ok) throw new Error(pendingData.detail || "Could not load pending list");
+            if (!waiterResponse.ok) throw new Error(waiterData.detail || "Could not load waiters list");
+            if (!responsibleResponse.ok) throw new Error(responsibleData.detail || "Could not load responsibles list");
 
-                if (!waiterResponse.ok) {
-                    throw new Error(waiterData.detail || "Could not load waiters list");
-                }
-
-                if (!responsibleResponse.ok) {
-                    throw new Error(responsibleData.detail || "Could not load responsibles list");
-                }
-
-                setRestaurant(restaurantData);
-                setPendingList(pendingData);
-                setWaiterList(waiterData);
-                setResponsibleList(responsibleData);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "Could not load restaurant");
-            } finally {
-                setLoading(false);
-            }
-        };
-
-        loadRestaurant();
+            setRestaurant(restaurantData);
+            setPendingList(pendingData);
+            setWaiterList(waiterData);
+            setResponsibleList(responsibleData);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Could not load restaurant");
+        } finally {
+            setLoading(false);
+        }
     }, [API_URL, restaurantId]);
+
+    useEffect(() => {
+        loadRestaurant();
+    }, [loadRestaurant]);
 
     const handleAddWaiter = async (user_id: number) => {
         const token = localStorage.getItem("access_token");
@@ -129,11 +114,11 @@ export function RestaurantPage() {
                 const data = await response.json();
                 throw new Error(data.detail || "Could not add to waiters");
             }
-            navigate("/dashboard");
+            await loadRestaurant();
         } catch (err) {
             setError(err instanceof Error ? err.message : "Could not add to waiters");
         } finally {
-            setDeleting(false);
+            setAddingWaiter(false);
         }
     };
 
@@ -163,11 +148,11 @@ export function RestaurantPage() {
                 const data = await response.json();
                 throw new Error(data.detail || "Could not add to responsibles");
             }
-            navigate("/dashboard");
+            await loadRestaurant();
         } catch (err) {
             setError(err instanceof Error ? err.message : "Could not add to responsibles");
         } finally {
-            setDeleting(false);
+            setAddingResponsible(false);
         }
     }
 
@@ -197,11 +182,73 @@ export function RestaurantPage() {
                 const data = await response.json();
                 throw new Error(data.detail || "Could not delete this user");
             }
-            navigate("/dashboard");
+            await loadRestaurant();
         } catch (err) {
             setError(err instanceof Error ? err.message : "Could not delete this user");
         } finally {
             setDeletingUser(false);
+        }
+    }
+
+    const handleDeleteWaiter = async (user_id: number) => {
+        const token = localStorage.getItem("access_token");
+        if (!token || !restaurantId) {
+            setError("Missing restaurant or authentication");
+            return;
+        }
+        const confirmed = window.confirm("Are you sure you want to fire this waiter ?");
+        if (!confirmed) {
+            return;
+        }
+        setDeletingWaiter(true);
+        setError("");
+        try {
+            const response = await fetch(`${API_URL}/delete/waiter/${restaurantId}/${user_id}`, {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.detail || "Could not delete this user");
+            }
+            await loadRestaurant();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Could not delete this waiter");
+        } finally {
+            setDeletingWaiter(false);
+        }
+    }
+
+    const handleDeleteResponsible = async (user_id: number) => {
+        const token = localStorage.getItem("access_token");
+        if (!token || !restaurantId) {
+            setError("Missing restaurant or authentication");
+            return;
+        }
+        const confirmed = window.confirm("Are you sure you want to fire this responsible ?");
+        if (!confirmed) {
+            return;
+        }
+        setDeletingResponsible(true);
+        setError("");
+        try {
+            const response = await fetch(`${API_URL}/delete/responsible/${restaurantId}/${user_id}`, {
+                method: "DELETE",
+                headers: {
+                    Authorization: `Bearer ${token}`
+                }
+            });
+            if (!response.ok) {
+                const data = await response.json();
+                throw new Error(data.detail || "Could not delete this user");
+            }
+            await loadRestaurant();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : "Could not delete this responsible");
+        } finally {
+            setDeletingResponsible(false);
         }
     }
 
@@ -287,6 +334,9 @@ export function RestaurantPage() {
                             <>
                                 <li key={user.id} style={{ marginBottom: "0.75rem" }}>
                                     <span>{user.username}</span>
+                                    <button type="button" onClick={() => handleDeleteWaiter(user.id)} disabled={deletingWaiter}>
+                                        {deletingWaiter ? "Deleting waiter..." : "Fire"}
+                                    </button>
                                 </li>
                             </>
                         ))}
@@ -300,6 +350,9 @@ export function RestaurantPage() {
                             <>
                                 <li key={user.id} style={{ marginBottom: "0.75rem" }}>
                                     <span>{user.username}</span>
+                                    <button type="button" onClick={() => handleDeleteResponsible(user.id)} disabled={deletingResponsible}>
+                                        {deletingResponsible ? "Deleting responsible..." : "Fire"}
+                                    </button>
                                 </li>
                             </>
                         ))}

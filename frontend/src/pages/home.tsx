@@ -64,7 +64,7 @@ function AuthButton({
     const handleLogout = () => {
         localStorage.removeItem("access_token");
         setIsAuthed(false);
-        navigate("/");
+        window.location.reload()
     };
 
     return (
