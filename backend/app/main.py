@@ -11,6 +11,7 @@ from .models.restaurant_model import Restaurant
 from .models.join_request_model import JoinRequest
 from .models.restaurant_responsible_model import RestaurantResponsible
 from .models.restaurant_waiter_model import RestaurantWaiter
+from .models.cash_register_model import CashRegister
 from .schemas.user_schema import UserCreate, UserRead
 from .schemas.restaurant_schema import RestaurantCreate,RestaurantRead,RestaurantUpdate
 from .schemas.join_request_schema import JoinRequestCreate,JoinRequestRead
@@ -344,8 +345,14 @@ def create_restaurant(
         password_hash=hash_password(payload.password),
         owner_id=current_user.id,
     )
-
     db.add(restaurant)
+    db.flush()
+
+    cash_register = CashRegister(
+        restaurant_id=restaurant.id,
+        register_content=0.0,
+    )
+    db.add(cash_register)
 
     try:
         db.commit()
@@ -467,3 +474,26 @@ def read_current_user(current_user: User = Depends(get_current_user)):
 @app.get("/users/me/restaurants", response_model=list[RestaurantRead])
 def get_user_restaurants(current_user:User = Depends(get_current_user)):
     return current_user.restaurants
+
+@app.post("/cash/{restaurant_id}/{amount}")
+def add_or_remove_money_from_cash_register(restaurant_id:int,
+                                           amount:float,
+                                           db:Session = Depends(get_db),
+                                           user:User = Depends(get_current_user)):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    is_owner = restaurant.owner_id == user.id
+    responsible = db.execute(
+        select(RestaurantResponsible)
+        .where(user.id == RestaurantResponsible.user_id,
+               restaurant_id == RestaurantResponsible.restaurant_id)
+    ).scalar_one_or_none()
+    if not is_owner and not responsible:
+        raise HTTPException(status_code=403, detail="You do not have the right to change this cash register")
+    cash_register = db.execute(
+        select(CashRegister)
+        .where(CashRegister.restaurant_id == restaurant_id)
+    ).scalar_one_or_none()
+    if not cash_register:
+        raise HTTPException(status_code=404, detail="Cash register not found")
+    
+    cash_register.register_content += amount

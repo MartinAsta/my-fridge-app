@@ -13,6 +13,7 @@ if TYPE_CHECKING:
     from .join_request_model import JoinRequest
     from .restaurant_waiter_model import RestaurantWaiter
     from .restaurant_responsible_model import RestaurantResponsible
+    from .cash_register_model import CashRegister
 
 class Restaurant(Base):
     __tablename__ = "restaurants"
@@ -53,5 +54,12 @@ class Restaurant(Base):
     restaurant_responsibles: Mapped[list["RestaurantResponsible"]] = relationship(
         "RestaurantResponsible",
         back_populates="restaurant",
+        cascade="all, delete-orphan",
+    )
+
+    cash_register: Mapped["CashRegister"] = relationship(
+        "CashRegister",
+        back_populates="restaurant",
+        uselist=False,
         cascade="all, delete-orphan",
     )
