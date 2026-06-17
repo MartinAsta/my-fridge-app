@@ -243,9 +243,41 @@ def get_pending_list(restaurant_id:int, db:Session = Depends(get_db), user:User 
             detail="You do not own this restaurant",
         )
     pending_list = db.execute(
-        select(User).join(JoinRequest, JoinRequest.user_id == User.id).where(JoinRequest.restaurant_id == restaurant_id)
+        select(User)
+        .join(JoinRequest, JoinRequest.user_id == User.id)
+        .where(JoinRequest.restaurant_id == restaurant_id)
     ).scalars().all()
     return pending_list
+
+@app.get("/get/waiters/{restaurant_id}", response_model=list[UserRead])
+def get_waiters_list(restaurant_id:int, db:Session = Depends(get_db), user:User = Depends(get_current_user)):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    if restaurant.owner_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not own this restaurant",
+        )
+    waiters_list = db.execute(
+        select(User)
+        .join(RestaurantWaiter, RestaurantWaiter.user_id == User.id)
+        .where(RestaurantWaiter.restaurant_id == restaurant_id)
+    ).scalars().all()
+    return waiters_list
+
+@app.get("/get/responsibles/{restaurant_id}", response_model=list[UserRead])
+def get_responsibles_list(restaurant_id:int, db:Session = Depends(get_db), user:User = Depends(get_current_user)):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    if restaurant.owner_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="You do not own this restaurant",
+        )
+    responsibles_list = db.execute(
+        select(User)
+        .join(RestaurantResponsible, RestaurantResponsible.user_id == User.id)
+        .where(RestaurantResponsible.restaurant_id == restaurant_id)
+    ).scalars().all()
+    return responsibles_list
 
 @app.post("/restaurant/create", response_model=RestaurantRead, status_code=201)
 def create_restaurant(

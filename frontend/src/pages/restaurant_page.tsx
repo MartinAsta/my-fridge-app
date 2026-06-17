@@ -21,6 +21,8 @@ export function RestaurantPage() {
 
     const [restaurant, setRestaurant] = useState<Restaurant | null>(null);
     const [pendingList, setPendingList] = useState<User[]>([]);
+    const [waiterList, setWaiterList] = useState<User[]>([]);
+    const [responsibleList, setResponsibleList] = useState<User[]>([])
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(true);
     const [deleting, setDeleting] = useState(false);
@@ -41,21 +43,33 @@ export function RestaurantPage() {
 
         const loadRestaurant = async () => {
             try {
-                const [restaurantResponse, pendingResponse] = await Promise.all([
+                const [restaurantResponse, pendingResponse, waiterResponse, responsibleResponse] = await Promise.all([
                     fetch(`${API_URL}/restaurant/get/${restaurantId}`, {
                         headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
+                            Authorization: `Bearer ${token}`
+                        }
                     }),
                     fetch(`${API_URL}/restaurant/pending/${restaurantId}`, {
                         headers: {
-                            Authorization: `Bearer ${token}`,
-                        },
+                            Authorization: `Bearer ${token}`
+                        }
                     }),
+                    fetch(`${API_URL}/get/waiters/${restaurantId}`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    }),
+                    fetch(`${API_URL}/get/responsibles/${restaurantId}`, {
+                        headers: {
+                            Authorization: `Bearer ${token}`
+                        }
+                    })
                 ]);
 
                 const restaurantData = await restaurantResponse.json();
                 const pendingData = await pendingResponse.json();
+                const waiterData = await waiterResponse.json();
+                const responsibleData = await responsibleResponse.json();
 
                 if (!restaurantResponse.ok) {
                     throw new Error(restaurantData.detail || "Could not load restaurant");
@@ -65,8 +79,18 @@ export function RestaurantPage() {
                     throw new Error(pendingData.detail || "Could not load pending list");
                 }
 
+                if (!waiterResponse.ok) {
+                    throw new Error(waiterData.detail || "Could not load waiters list");
+                }
+
+                if (!responsibleResponse.ok) {
+                    throw new Error(responsibleData.detail || "Could not load responsibles list");
+                }
+
                 setRestaurant(restaurantData);
                 setPendingList(pendingData);
+                setWaiterList(waiterData);
+                setResponsibleList(responsibleData);
             } catch (err) {
                 setError(err instanceof Error ? err.message : "Could not load restaurant");
             } finally {
@@ -169,12 +193,12 @@ export function RestaurantPage() {
                     }
                 }
             );
-            if(!response.ok){
+            if (!response.ok) {
                 const data = await response.json();
                 throw new Error(data.detail || "Could not delete this user");
             }
             navigate("/dashboard");
-        } catch(err) {
+        } catch (err) {
             setError(err instanceof Error ? err.message : "Could not delete this user");
         } finally {
             setDeletingUser(false);
@@ -233,28 +257,54 @@ export function RestaurantPage() {
                 {deleting ? "Deleting..." : "Delete restaurant"}
             </button>
 
-            <h2>Pending requests</h2>
-
-            {pendingList.length === 0 ? (
-                <p>No pending requests.</p>
-            ) : (
-                <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
-                    {pendingList.map((user) => (
-                        <li key={user.id} style={{ marginBottom: "0.75rem" }}>
-                            <span>{user.username}</span>
-                            <button type="button" onClick={() => handleAddWaiter(user.id)} disabled={addingWaiter}>
-                                {addingWaiter ? "Adding waiter..." : "Waiter"}
-                            </button>
-                            <button type="button" onClick={() => handleAddResponsible(user.id)} disabled={addingResponsible}>
-                                {addingResponsible ? "Adding responsible..." : "Responsible"}
-                            </button>
-                            <button type="button" onClick={() => handleDeleteUser(user.id)} disabled={deletingUser}>
-                                {deletingUser ? "Deleting user..." : "Deny"}
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            )}
+            {pendingList.length === 0 ? null :
+                (
+                    <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+                        {pendingList.map((user) => (
+                            <>
+                                <h2>Pending requests</h2>
+                                <li key={user.id} style={{ marginBottom: "0.75rem" }}>
+                                    <span>{user.username}</span>
+                                    <button type="button" onClick={() => handleAddWaiter(user.id)} disabled={addingWaiter}>
+                                        {addingWaiter ? "Adding waiter..." : "Waiter"}
+                                    </button>
+                                    <button type="button" onClick={() => handleAddResponsible(user.id)} disabled={addingResponsible}>
+                                        {addingResponsible ? "Adding responsible..." : "Responsible"}
+                                    </button>
+                                    <button type="button" onClick={() => handleDeleteUser(user.id)} disabled={deletingUser}>
+                                        {deletingUser ? "Deleting user..." : "Deny"}
+                                    </button>
+                                </li>
+                            </>
+                        ))}
+                    </ul>
+                )}
+            {waiterList.length === 0 ? null :
+                (
+                    <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+                        <h2>Waiters</h2>
+                        {waiterList.map((user) => (
+                            <>
+                                <li key={user.id} style={{ marginBottom: "0.75rem" }}>
+                                    <span>{user.username}</span>
+                                </li>
+                            </>
+                        ))}
+                    </ul>
+                )}
+            {responsibleList.length === 0 ? null :
+                (
+                    <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
+                        <h2>Responsibles</h2>
+                        {responsibleList.map((user) => (
+                            <>
+                                <li key={user.id} style={{ marginBottom: "0.75rem" }}>
+                                    <span>{user.username}</span>
+                                </li>
+                            </>
+                        ))}
+                    </ul>
+                )}
         </div>
     );
 }

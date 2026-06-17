@@ -32,7 +32,7 @@ export function Dashboard() {
                     ownedResponse,
                     waiterResponse,
                     responsibleResponse,
-                    pendingResponse // /pending/restaurants/get
+                    pendingResponse
                 ] = await Promise.all([
                     fetch(`${API_URL}/users/me/restaurants`, {
                         headers: {
