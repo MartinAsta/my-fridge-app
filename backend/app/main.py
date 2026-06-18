@@ -16,6 +16,7 @@ from .schemas.user_schema import UserCreate, UserRead
 from .schemas.restaurant_schema import RestaurantCreate,RestaurantRead,RestaurantUpdate
 from .schemas.join_request_schema import JoinRequestCreate,JoinRequestRead
 from .schemas.auth_schema import LoginRequest, Token, RestaurantLoginRequest
+from .schemas.cash_register_schema import CashChange, CashRegisterRead
 from .security import hash_password, verify_password, create_access_token, decode_access_token
 
 Base.metadata.create_all(bind=engine)
@@ -475,17 +476,17 @@ def read_current_user(current_user: User = Depends(get_current_user)):
 def get_user_restaurants(current_user:User = Depends(get_current_user)):
     return current_user.restaurants
 
-@app.post("/cash/{restaurant_id}/{amount}")
+@app.post("/cash/add/{restaurant_id}", response_model=CashRegisterRead)
 def add_or_remove_money_from_cash_register(restaurant_id:int,
-                                           amount:float,
+                                           payload:CashChange,
                                            db:Session = Depends(get_db),
                                            user:User = Depends(get_current_user)):
     restaurant = get_restaurant_or_404(db, restaurant_id)
     is_owner = restaurant.owner_id == user.id
     responsible = db.execute(
         select(RestaurantResponsible)
-        .where(user.id == RestaurantResponsible.user_id,
-               restaurant_id == RestaurantResponsible.restaurant_id)
+        .where(RestaurantResponsible.user_id == user.id,
+               RestaurantResponsible.restaurant_id == restaurant_id)
     ).scalar_one_or_none()
     if not is_owner and not responsible:
         raise HTTPException(status_code=403, detail="You do not have the right to change this cash register")
@@ -496,4 +497,31 @@ def add_or_remove_money_from_cash_register(restaurant_id:int,
     if not cash_register:
         raise HTTPException(status_code=404, detail="Cash register not found")
     
-    cash_register.register_content += amount
+    cash_register.register_content += payload.amount
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Couldn't modify the cash register")
+
+    db.refresh(cash_register)
+    return cash_register
+
+@app.get("/cast/get/{restaurant_id}", response_model=CashRegisterRead)
+def get_restaurant_cast_register_content(restaurant_id:int,
+                                         db:Session = Depends(get_db),
+                                         user:User = Depends(get_current_user)):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    is_owner = restaurant.owner_id == user.id
+    responsible = db.execute(
+        select(RestaurantResponsible)
+        .where(RestaurantResponsible.user_id == user.id,
+               RestaurantResponsible.restaurant_id == restaurant_id)
+    ).scalar_one_or_none()
+    if not is_owner and not responsible:
+        raise HTTPException(status_code=403, detail="You do not have the right to see the content of the cash register")
+    cash_register = db.execute(
+        select(CashRegister)
+        .where(CashRegister.restaurant_id == restaurant_id)
+    ).scalar_one_or_none()
+    return cash_register
