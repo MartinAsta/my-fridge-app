@@ -12,11 +12,13 @@ from .models.join_request_model import JoinRequest
 from .models.restaurant_responsible_model import RestaurantResponsible
 from .models.restaurant_waiter_model import RestaurantWaiter
 from .models.cash_register_model import CashRegister
+from .models.ingredient_model import Ingredient
 from .schemas.user_schema import UserCreate, UserRead
 from .schemas.restaurant_schema import RestaurantCreate,RestaurantRead,RestaurantUpdate
 from .schemas.join_request_schema import JoinRequestCreate,JoinRequestRead
 from .schemas.auth_schema import LoginRequest, Token, RestaurantLoginRequest
 from .schemas.cash_register_schema import CashChange, CashRegisterRead
+from .schemas.ingredient_schema import IngredientCreate, IngredientRead
 from .security import hash_password, verify_password, create_access_token, decode_access_token
 
 Base.metadata.create_all(bind=engine)
@@ -525,3 +527,25 @@ def get_restaurant_cast_register_content(restaurant_id:int,
         .where(CashRegister.restaurant_id == restaurant_id)
     ).scalar_one_or_none()
     return cash_register
+
+@app.post("/add/ingredient", response_model=IngredientRead, status_code=201)
+def add_ingredient(payload:IngredientCreate, db:Session = Depends(get_db)):
+    already_exists = db.execute(
+        select(Ingredient).where(Ingredient.name == payload.name)
+    ).scalar_one_or_none()
+    if already_exists:
+        raise HTTPException(status_code=409, detail="This ingredient already exists")
+    ingredient = Ingredient(
+        name = payload.name
+    )
+
+    db.add(ingredient)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Ingredient already exists")
+
+    db.refresh(ingredient)
+    return ingredient

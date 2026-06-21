@@ -8,6 +8,7 @@ import { CreateRestaurant } from './pages/owner/create_restaurant';
 import { RestaurantPage } from './pages/owner/restaurant_page';
 import { RestaurantFeed } from './pages/user/restaurant_feed';
 import { RestaurantLogin } from './pages/user/restaurant_login';
+import { CreateIngredient } from './pages/responsible/create_ingredient';
 
 function App() {
   return (
@@ -29,6 +30,8 @@ function App() {
           path="/restaurants" element={<RestaurantFeed />} />
         <Route
           path="/restaurants/login/:restaurantId" element={<RestaurantLogin />} />
+        <Route
+          path="/dashboard/add_ingredient" element={<CreateIngredient />} />
       </Routes>
     </BrowserRouter>
   );

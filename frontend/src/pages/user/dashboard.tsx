@@ -184,6 +184,20 @@ export function Dashboard() {
                                     </>
                                 )}
                             </div>
+                            <div>
+                                {restaurantsResponsible.length === 0 && restaurants.length === 0 ? (
+                                    null
+                                ) : (
+                                    <>
+                                        <button
+                                            type="button"
+                                            onClick={() => navigate("/dashboard/add_ingredient")}
+                                        >
+                                            Add an ingredient
+                                        </button>
+                                    </>
+                                )}
+                            </div>
                         </div>
                     </>
                 )}
