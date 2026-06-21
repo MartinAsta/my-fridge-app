@@ -310,6 +310,9 @@ export function RestaurantPage() {
             </button>
             <h1>{restaurant.restaurant_name}</h1>
             <span>Cash register : {restaurant.cash_register.register_content}</span>
+            <button onClick={() => navigate(`/dashboard/owner/restaurants/${restaurant.id}/fridge`)}>
+                Fridge
+            </button>
 
             <button type="button" onClick={handleDelete} disabled={deleting}>
                 {deleting ? "Deleting..." : "Delete restaurant"}

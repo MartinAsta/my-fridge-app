@@ -9,6 +9,7 @@ import { RestaurantPage } from './pages/owner/restaurant_page';
 import { RestaurantFeed } from './pages/user/restaurant_feed';
 import { RestaurantLogin } from './pages/user/restaurant_login';
 import { CreateIngredient } from './pages/responsible/create_ingredient';
+import { Fridge } from './pages/responsible/fridge';
 
 function App() {
   return (
@@ -32,6 +33,8 @@ function App() {
           path="/restaurants/login/:restaurantId" element={<RestaurantLogin />} />
         <Route
           path="/dashboard/add_ingredient" element={<CreateIngredient />} />
+        <Route
+          path="/dashboard/owner/restaurants/:restaurantId/fridge" element={<Fridge />} />
       </Routes>
     </BrowserRouter>
   );

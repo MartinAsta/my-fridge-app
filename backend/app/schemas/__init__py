@@ -2,4 +2,6 @@ from .user_schema import UserCreate, UserRead
 from .restaurant_schema import RestaurantCreate,RestaurantRead,RestaurantUpdate
 from .auth_schema import LoginRequest,Token
 from .join_request_schema import JoinRequestCreate, JoinRequestRead
-from cash_register_schema import CashChange, CashRegisterRead
+from .cash_register_schema import CashChange, CashRegisterRead
+from .ingredient_schema import IngredientCreate, IngredientRead
+from .fridge_schema import FridgeRead

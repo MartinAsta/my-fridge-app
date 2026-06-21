@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 
 from .database import Base, engine, get_db
 from .models.user_model import User
@@ -13,12 +13,14 @@ from .models.restaurant_responsible_model import RestaurantResponsible
 from .models.restaurant_waiter_model import RestaurantWaiter
 from .models.cash_register_model import CashRegister
 from .models.ingredient_model import Ingredient
+from .models.fridge_model import Fridge
 from .schemas.user_schema import UserCreate, UserRead
 from .schemas.restaurant_schema import RestaurantCreate,RestaurantRead,RestaurantUpdate
 from .schemas.join_request_schema import JoinRequestCreate,JoinRequestRead
 from .schemas.auth_schema import LoginRequest, Token, RestaurantLoginRequest
 from .schemas.cash_register_schema import CashChange, CashRegisterRead
 from .schemas.ingredient_schema import IngredientCreate, IngredientRead
+from .schemas.fridge_schema import FridgeRead, FridgeCreate
 from .security import hash_password, verify_password, create_access_token, decode_access_token
 
 Base.metadata.create_all(bind=engine)
@@ -549,3 +551,87 @@ def add_ingredient(payload:IngredientCreate, db:Session = Depends(get_db)):
 
     db.refresh(ingredient)
     return ingredient
+
+@app.get("/get/fridge/{restaurant_id}", response_model=list[FridgeRead])
+def get_fridge(restaurant_id: int,
+               db: Session = Depends(get_db),
+               user: User = Depends(get_current_user),
+):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+
+    is_owner = restaurant.owner_id == user.id
+    is_responsible = db.execute(
+        select(RestaurantResponsible).where(
+            RestaurantResponsible.restaurant_id == restaurant_id,
+            RestaurantResponsible.user_id == user.id,
+        )
+    ).scalar_one_or_none()
+
+    if not is_owner and not is_responsible:
+        raise HTTPException(status_code=403, detail="You do not have access to this fridge")
+
+    fridge_items = db.execute(
+        select(Fridge)
+        .options(selectinload(Fridge.ingredient))
+        .where(Fridge.restaurant_id == restaurant_id)
+    ).scalars().all()
+
+    return fridge_items
+
+@app.post("/add/fridge/{restaurant_id}", response_model=FridgeRead)
+def add_ingredient_to_fridge(restaurant_id:int,
+                             payload:FridgeCreate,
+                             db:Session = Depends(get_db),
+                             user:User = Depends(get_current_user)):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+
+    is_owner = restaurant.owner_id == user.id
+    is_responsible = db.execute(
+        select(RestaurantResponsible).where(
+            RestaurantResponsible.restaurant_id == restaurant_id,
+            RestaurantResponsible.user_id == user.id,
+        )
+    ).scalar_one_or_none()
+    if not is_owner and not is_responsible:
+        raise HTTPException(status_code=403, detail="You do not have access to this fridge")
+    
+    ingredient = db.execute(
+        select(Ingredient).where(Ingredient.id == payload.ingredient_id)
+    ).scalar_one_or_none()
+
+    if not ingredient:
+        raise HTTPException(status_code=404, detail="Ingredient not found")
+
+    fridge_item = db.execute(
+        select(Fridge).where(
+            Fridge.restaurant_id == restaurant_id,
+            Fridge.ingredient_id == payload.ingredient_id,
+        )
+    ).scalar_one_or_none()
+
+    if fridge_item:
+        fridge_item.quantity += payload.quantity
+    else:
+        fridge_item = Fridge(
+            restaurant_id=restaurant_id,
+            ingredient_id=payload.ingredient_id,
+            quantity=payload.quantity,
+        )
+        db.add(fridge_item)
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Could not update fridge")
+
+    db.refresh(fridge_item)
+    return fridge_item
+
+@app.get("/ingredients", response_model=list[IngredientRead])
+def get_all_ingredients(db: Session = Depends(get_db)):
+    ingredients = db.execute(
+        select(Ingredient).order_by(Ingredient.name)
+    ).scalars().all()
+
+    return ingredients
