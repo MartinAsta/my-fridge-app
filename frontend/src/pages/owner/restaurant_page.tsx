@@ -1,11 +1,18 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
+type CashRegister = {
+    id: number;
+    restaurant_id: number;
+    register_content: number;
+};
+
 type Restaurant = {
     id: number;
     restaurant_name: string;
     owner_id: number;
     created_at: string;
+    cash_register: CashRegister;
 };
 
 type User = {
@@ -302,6 +309,7 @@ export function RestaurantPage() {
                 Dashboard
             </button>
             <h1>{restaurant.restaurant_name}</h1>
+            <span>Cash register : {restaurant.cash_register.register_content}</span>
 
             <button type="button" onClick={handleDelete} disabled={deleting}>
                 {deleting ? "Deleting..." : "Delete restaurant"}

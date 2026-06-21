@@ -2,6 +2,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
+from .cash_register_schema import CashRegisterRead
 
 class RestaurantCreate(BaseModel):
     restaurant_name: str = Field(min_length=3, max_length=50)
@@ -35,3 +36,4 @@ class RestaurantRead(BaseModel):
     restaurant_name: str
     owner_id: int
     created_at: datetime
+    cash_register: CashRegisterRead
