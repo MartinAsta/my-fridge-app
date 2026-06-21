@@ -5,3 +5,4 @@ from .restaurant_waiter_model import RestaurantWaiter
 from .restaurant_responsible_model import RestaurantResponsible
 from .cash_register_model import CashRegister
 from .ingredient_model import Ingredient
+from .fridge_model import Fridge

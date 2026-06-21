@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from .restaurant_waiter_model import RestaurantWaiter
     from .restaurant_responsible_model import RestaurantResponsible
     from .cash_register_model import CashRegister
+    from .fridge_model import Fridge
 
 class Restaurant(Base):
     __tablename__ = "restaurants"
@@ -61,5 +62,11 @@ class Restaurant(Base):
         "CashRegister",
         back_populates="restaurant",
         uselist=False,
+        cascade="all, delete-orphan",
+    )
+
+    fridge_items: Mapped[list["Fridge"]] = relationship(
+        "Fridge",
+        back_populates="restaurant",
         cascade="all, delete-orphan",
     )
