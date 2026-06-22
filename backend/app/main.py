@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session, selectinload
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from .database import Base, engine, get_db
 from .models.user_model import User
@@ -511,8 +511,8 @@ def add_or_remove_money_from_cash_register(restaurant_id:int,
     db.refresh(cash_register)
     return cash_register
 
-@app.get("/cast/get/{restaurant_id}", response_model=CashRegisterRead)
-def get_restaurant_cast_register_content(restaurant_id:int,
+@app.get("/cash/get/{restaurant_id}", response_model=CashRegisterRead)
+def get_restaurant_cash_register_content(restaurant_id:int,
                                          db:Session = Depends(get_db),
                                          user:User = Depends(get_current_user)):
     restaurant = get_restaurant_or_404(db, restaurant_id)
@@ -578,11 +578,13 @@ def get_fridge(restaurant_id: int,
 
     return fridge_items
 
-@app.post("/add/fridge/{restaurant_id}", response_model=FridgeRead)
-def add_ingredient_to_fridge(restaurant_id:int,
-                             payload:FridgeCreate,
-                             db:Session = Depends(get_db),
-                             user:User = Depends(get_current_user)):
+@app.post("/add/fridge/{restaurant_id}", response_model=list[FridgeRead])
+def add_ingredients_to_fridge(
+    restaurant_id: int,
+    payload: list[FridgeCreate],
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
     restaurant = get_restaurant_or_404(db, restaurant_id)
 
     is_owner = restaurant.owner_id == user.id
@@ -592,32 +594,52 @@ def add_ingredient_to_fridge(restaurant_id:int,
             RestaurantResponsible.user_id == user.id,
         )
     ).scalar_one_or_none()
+
     if not is_owner and not is_responsible:
         raise HTTPException(status_code=403, detail="You do not have access to this fridge")
-    
-    ingredient = db.execute(
-        select(Ingredient).where(Ingredient.id == payload.ingredient_id)
-    ).scalar_one_or_none()
 
-    if not ingredient:
-        raise HTTPException(status_code=404, detail="Ingredient not found")
+    if not payload:
+        raise HTTPException(status_code=400, detail="No ingredients provided")
 
-    fridge_item = db.execute(
+    quantities_by_ingredient: dict[int, int] = {}
+    for item in payload:
+        quantities_by_ingredient[item.ingredient_id] = quantities_by_ingredient.get(item.ingredient_id, 0) + item.quantity
+
+    ingredient_ids = set(quantities_by_ingredient.keys())
+
+    existing_ingredient_ids = set(
+        db.execute(
+            select(Ingredient.id).where(Ingredient.id.in_(ingredient_ids))
+        ).scalars().all()
+    )
+
+    missing = ingredient_ids - existing_ingredient_ids
+    if missing:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Ingredient(s) not found: {', '.join(map(str, sorted(missing)))}",
+        )
+
+    existing_fridge_items = db.execute(
         select(Fridge).where(
             Fridge.restaurant_id == restaurant_id,
-            Fridge.ingredient_id == payload.ingredient_id,
+            Fridge.ingredient_id.in_(ingredient_ids),
         )
-    ).scalar_one_or_none()
+    ).scalars().all()
 
-    if fridge_item:
-        fridge_item.quantity += payload.quantity
-    else:
-        fridge_item = Fridge(
-            restaurant_id=restaurant_id,
-            ingredient_id=payload.ingredient_id,
-            quantity=payload.quantity,
-        )
-        db.add(fridge_item)
+    fridge_by_ingredient = {item.ingredient_id: item for item in existing_fridge_items}
+
+    for ingredient_id, quantity in quantities_by_ingredient.items():
+        if ingredient_id in fridge_by_ingredient:
+            fridge_by_ingredient[ingredient_id].quantity += quantity
+        else:
+            db.add(
+                Fridge(
+                    restaurant_id=restaurant_id,
+                    ingredient_id=ingredient_id,
+                    quantity=quantity,
+                )
+            )
 
     try:
         db.commit()
@@ -625,8 +647,16 @@ def add_ingredient_to_fridge(restaurant_id:int,
         db.rollback()
         raise HTTPException(status_code=409, detail="Could not update fridge")
 
-    db.refresh(fridge_item)
-    return fridge_item
+    updated_items = db.execute(
+        select(Fridge)
+        .options(joinedload(Fridge.ingredient))
+        .where(
+            Fridge.restaurant_id == restaurant_id,
+            Fridge.ingredient_id.in_(ingredient_ids),
+        )
+    ).scalars().all()
+
+    return updated_items
 
 @app.get("/ingredients", response_model=list[IngredientRead])
 def get_all_ingredients(db: Session = Depends(get_db)):
