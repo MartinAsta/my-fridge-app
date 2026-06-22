@@ -5,3 +5,4 @@ from .join_request_schema import JoinRequestCreate, JoinRequestRead
 from .cash_register_schema import CashChange, CashRegisterRead
 from .ingredient_schema import IngredientCreate, IngredientRead
 from .fridge_schema import FridgeRead
+from .dish_schema import DishCreate,DishIngredientCreate,DishIngredientRead,DishRead

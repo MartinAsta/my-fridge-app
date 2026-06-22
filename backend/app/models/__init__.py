@@ -6,3 +6,5 @@ from .restaurant_responsible_model import RestaurantResponsible
 from .cash_register_model import CashRegister
 from .ingredient_model import Ingredient
 from .fridge_model import Fridge
+from .dish_model import Dish
+from .dish_ingredient_model import DishIngredient

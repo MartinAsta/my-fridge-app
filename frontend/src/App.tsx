@@ -9,7 +9,9 @@ import { RestaurantPage } from './pages/owner/restaurant_page';
 import { RestaurantFeed } from './pages/user/restaurant_feed';
 import { RestaurantLogin } from './pages/user/restaurant_login';
 import { CreateIngredient } from './pages/responsible/create_ingredient';
-import { Fridge } from './pages/responsible/fridge';
+import { Fridge } from './pages/owner/fridge';
+import { CreateDish } from './pages/owner/create_dish';
+import { Dish } from './pages/owner/dish';
 
 function App() {
   return (
@@ -35,6 +37,10 @@ function App() {
           path="/dashboard/add_ingredient" element={<CreateIngredient />} />
         <Route
           path="/dashboard/owner/restaurants/:restaurantId/fridge" element={<Fridge />} />
+        <Route
+          path="/dashboard/owner/restaurants/:restaurantId/dishes" element={<Dish />} />
+        <Route
+          path="/dashboard/owner/restaurants/:restaurantId/dishes/create" element={<CreateDish />} />
       </Routes>
     </BrowserRouter>
   );

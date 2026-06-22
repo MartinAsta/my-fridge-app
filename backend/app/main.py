@@ -14,6 +14,8 @@ from .models.restaurant_waiter_model import RestaurantWaiter
 from .models.cash_register_model import CashRegister
 from .models.ingredient_model import Ingredient
 from .models.fridge_model import Fridge
+from .models.dish_ingredient_model import DishIngredient
+from .models.dish_model import Dish
 from .schemas.user_schema import UserCreate, UserRead
 from .schemas.restaurant_schema import RestaurantCreate,RestaurantRead,RestaurantUpdate
 from .schemas.join_request_schema import JoinRequestCreate,JoinRequestRead
@@ -21,6 +23,7 @@ from .schemas.auth_schema import LoginRequest, Token, RestaurantLoginRequest
 from .schemas.cash_register_schema import CashChange, CashRegisterRead
 from .schemas.ingredient_schema import IngredientCreate, IngredientRead
 from .schemas.fridge_schema import FridgeRead, FridgeCreate
+from .schemas.dish_schema import DishCreate,DishIngredientCreate,DishIngredientRead,DishRead
 from .security import hash_password, verify_password, create_access_token, decode_access_token
 
 Base.metadata.create_all(bind=engine)
@@ -665,3 +668,103 @@ def get_all_ingredients(db: Session = Depends(get_db)):
     ).scalars().all()
 
     return ingredients
+
+@app.post("/add/dish/{restaurant_id}", response_model=DishRead)
+def add_dish(
+    restaurant_id: int,
+    payload: DishCreate,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+
+    is_owner = restaurant.owner_id == user.id
+    is_responsible = db.execute(
+        select(RestaurantResponsible).where(
+            RestaurantResponsible.restaurant_id == restaurant_id,
+            RestaurantResponsible.user_id == user.id,
+        )
+    ).scalar_one_or_none()
+
+    if not is_owner and not is_responsible:
+        raise HTTPException(status_code=403, detail="You do not have access to this restaurant")
+
+    if not payload.ingredients:
+        raise HTTPException(status_code=400, detail="A dish must contain at least one ingredient")
+
+    quantities_by_ingredient: dict[int, int] = {}
+    for item in payload.ingredients:
+        quantities_by_ingredient[item.ingredient_id] = quantities_by_ingredient.get(item.ingredient_id, 0) + item.quantity_needed
+
+    ingredient_ids = set(quantities_by_ingredient.keys())
+
+    existing_ingredient_ids = set(
+        db.execute(
+            select(Ingredient.id).where(Ingredient.id.in_(ingredient_ids))
+        ).scalars().all()
+    )
+
+    missing = ingredient_ids - existing_ingredient_ids
+    if missing:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Ingredient(s) not found: {', '.join(map(str, sorted(missing)))}",
+        )
+
+    dish = Dish(
+        restaurant_id=restaurant_id,
+        name=payload.name,
+        price=payload.price,
+    )
+    db.add(dish)
+    db.flush()
+
+    for ingredient_id, quantity_needed in quantities_by_ingredient.items():
+        db.add(
+            DishIngredient(
+                dish_id=dish.id,
+                ingredient_id=ingredient_id,
+                quantity_needed=quantity_needed,
+            )
+        )
+
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Could not create dish")
+
+    dish = db.execute(
+        select(Dish)
+        .options(selectinload(Dish.dish_ingredients))
+        .where(Dish.id == dish.id)
+    ).scalar_one()
+
+    return dish
+
+@app.get("/get/menu/{restaurant_id}", response_model=list[DishRead])
+def get_menu(restaurant_id:int,
+                   db:Session = Depends(get_db),
+                   user:User = Depends(get_current_user)):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    is_owner = restaurant.owner_id == user.id
+    is_responsible = db.execute(
+        select(RestaurantResponsible).where(
+            RestaurantResponsible.restaurant_id == restaurant_id,
+            RestaurantResponsible.user_id == user.id
+        )
+    ).scalar_one_or_none()
+    is_waiter = db.execute(
+        select(RestaurantWaiter).where(
+            RestaurantWaiter.user_id == user.id,
+            RestaurantWaiter.restaurant_id == restaurant_id
+        )
+    ).scalar_one_or_none()
+    if not is_owner and not is_responsible and not is_waiter:
+        raise HTTPException(status_code=403, detail="You do not have access to this menu")
+    
+    menu = db.execute(
+        select(Dish).where(Dish.restaurant_id == restaurant_id)
+    ).scalars().all()
+
+    return menu
