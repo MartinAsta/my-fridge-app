@@ -12,6 +12,7 @@ import { CreateIngredient } from './pages/responsible/create_ingredient';
 import { Fridge } from './pages/owner/fridge';
 import { CreateDish } from './pages/owner/create_dish';
 import { Menu } from './pages/owner/menu';
+import { WaiterMenu } from './pages/waiter/waiter_menu';
 
 function App() {
   return (
@@ -41,6 +42,8 @@ function App() {
           path="/dashboard/restaurants/:restaurantId/dishes" element={<Menu />} />
         <Route
           path="/dashboard/restaurants/:restaurantId/dishes/create" element={<CreateDish />} />
+        <Route
+          path="/dashboard/waiter/restaurants/:restaurantId/menu" element={<WaiterMenu />} />
       </Routes>
     </BrowserRouter>
   );

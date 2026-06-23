@@ -8,3 +8,4 @@ from .ingredient_model import Ingredient
 from .fridge_model import Fridge
 from .dish_model import Dish
 from .dish_ingredient_model import DishIngredient
+from .order_model import Order

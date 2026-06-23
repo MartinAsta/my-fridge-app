@@ -144,7 +144,14 @@ export function Dashboard() {
                                         <ul style={{ listStyle: "none", paddingLeft: 0, margin: 0 }}>
                                             {restaurantsWaiter.map((restaurant) => (
                                                 <li key={restaurant.id} style={{ marginBottom: "0.75rem" }}>
-                                                    <span>{restaurant.restaurant_name}</span>
+                                                    <span>{restaurant.restaurant_name}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => navigate(`/dashboard/waiter/restaurants/${restaurant.id}/menu`)}
+                                                        >
+                                                            Work
+                                                        </button>
+                                                    </span>
                                                 </li>
                                             ))}
                                         </ul>

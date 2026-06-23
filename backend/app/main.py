@@ -16,6 +16,7 @@ from .models.ingredient_model import Ingredient
 from .models.fridge_model import Fridge
 from .models.dish_ingredient_model import DishIngredient
 from .models.dish_model import Dish
+from .models.order_model import Order
 from .schemas.user_schema import UserCreate, UserRead
 from .schemas.restaurant_schema import RestaurantCreate,RestaurantRead,RestaurantUpdate
 from .schemas.join_request_schema import JoinRequestCreate,JoinRequestRead
@@ -24,6 +25,7 @@ from .schemas.cash_register_schema import CashChange, CashRegisterRead
 from .schemas.ingredient_schema import IngredientCreate, IngredientRead
 from .schemas.fridge_schema import FridgeRead, FridgeCreate
 from .schemas.dish_schema import DishCreate,DishIngredientCreate,DishIngredientRead,DishRead
+from .schemas.order_schema import OrderCreate,OrderRead
 from .security import hash_password, verify_password, create_access_token, decode_access_token
 
 Base.metadata.create_all(bind=engine)
@@ -769,3 +771,40 @@ def get_menu(restaurant_id:int,
                                .where(Dish.restaurant_id == restaurant_id)).scalars().all()
 
     return menu
+
+@app.post("/create/order/{restaurant_id}", response_model=OrderRead)
+def create_order(restaurant_id:int,
+                 payload:OrderCreate,
+                 db:Session = Depends(get_db),
+                 user:User = Depends(get_current_user)):
+    
+    restaurant = get_restaurant_or_404(db,restaurant_id)
+    is_waiter = db.execute(
+        select(RestaurantWaiter).where(
+            RestaurantWaiter.user_id == user.id,
+            RestaurantWaiter.restaurant_id == restaurant_id
+        )
+    ).scalar_one_or_none()
+    if not is_waiter:
+        raise HTTPException(status_code=403, detail="You do not have the right to place orders")
+    cash_register = db.execute(
+        select(CashRegister).where(CashRegister.restaurant_id == restaurant_id)
+    ).scalar_one_or_none()
+    dish = db.execute(
+        select(Dish).where(Dish.id == payload.dish_id)
+    ).scalar_one_or_none()
+    new_order = Order(
+        restaurant_id = restaurant_id,
+        waiter_id = user.id,
+        dish_id = payload.dish_id
+    )
+    db.add(new_order)
+    
+    try:
+        cash_register.register_content += dish.price
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(status_code=409, detail="Could not create order")
+    db.refresh(new_order)
+    return new_order
