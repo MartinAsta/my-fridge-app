@@ -763,8 +763,9 @@ def get_menu(restaurant_id:int,
     if not is_owner and not is_responsible and not is_waiter:
         raise HTTPException(status_code=403, detail="You do not have access to this menu")
     
-    menu = db.execute(
-        select(Dish).where(Dish.restaurant_id == restaurant_id)
-    ).scalars().all()
+    menu = db.execute(select(Dish)
+                      .options(selectinload(Dish.dish_ingredients)
+                               .selectinload(DishIngredient.ingredient))
+                               .where(Dish.restaurant_id == restaurant_id)).scalars().all()
 
     return menu

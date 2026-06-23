@@ -38,9 +38,9 @@ function App() {
         <Route
           path="/dashboard/owner/restaurants/:restaurantId/fridge" element={<Fridge />} />
         <Route
-          path="/dashboard/owner/restaurants/:restaurantId/dishes" element={<Menu />} />
+          path="/dashboard/restaurants/:restaurantId/dishes" element={<Menu />} />
         <Route
-          path="/dashboard/owner/restaurants/:restaurantId/dishes/create" element={<CreateDish />} />
+          path="/dashboard/restaurants/:restaurantId/dishes/create" element={<CreateDish />} />
       </Routes>
     </BrowserRouter>
   );
