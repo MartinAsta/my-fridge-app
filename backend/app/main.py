@@ -822,6 +822,9 @@ def get_orders_logs(restaurant_id:int,
     if not is_owner:
         raise HTTPException(status_code=403, detail="You do not have the right to see the logs")
     orders = db.execute(
-        select(Order).where(Order.restaurant_id == restaurant_id)
+        select(Order)
+        .options(selectinload(Order.waiter),
+                 selectinload(Order.dish))
+        .where(Order.restaurant_id == restaurant_id)
     ).scalars().all()
     return orders
