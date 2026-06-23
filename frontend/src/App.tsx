@@ -13,6 +13,7 @@ import { Fridge } from './pages/owner/fridge';
 import { CreateDish } from './pages/owner/create_dish';
 import { Menu } from './pages/owner/menu';
 import { WaiterMenu } from './pages/waiter/waiter_menu';
+import { OrderLogs } from './pages/owner/order_logs';
 
 function App() {
   return (
@@ -38,6 +39,8 @@ function App() {
           path="/dashboard/add_ingredient" element={<CreateIngredient />} />
         <Route
           path="/dashboard/owner/restaurants/:restaurantId/fridge" element={<Fridge />} />
+        <Route
+          path="/dashboard/owner/restaurants/:restaurantId/orders" element={<OrderLogs />} />
         <Route
           path="/dashboard/restaurants/:restaurantId/dishes" element={<Menu />} />
         <Route

@@ -319,6 +319,10 @@ export function RestaurantPage() {
                 Menu
             </button>
 
+            <button onClick={() => navigate(`/dashboard/owner/restaurants/${restaurantId}/orders`)}>
+                Orders logs
+            </button>
+
             <button type="button" onClick={handleDelete} disabled={deleting}>
                 {deleting ? "Deleting..." : "Delete restaurant"}
             </button>

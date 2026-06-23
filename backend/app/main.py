@@ -791,8 +791,12 @@ def create_order(restaurant_id:int,
         select(CashRegister).where(CashRegister.restaurant_id == restaurant_id)
     ).scalar_one_or_none()
     dish = db.execute(
-        select(Dish).where(Dish.id == payload.dish_id)
+        select(Dish)
+        .where(Dish.id == payload.dish_id,
+               Dish.restaurant_id == restaurant_id)
     ).scalar_one_or_none()
+    if not dish:
+        raise HTTPException(status_code=404, detail="Dish not found")
     new_order = Order(
         restaurant_id = restaurant_id,
         waiter_id = user.id,
@@ -808,3 +812,16 @@ def create_order(restaurant_id:int,
         raise HTTPException(status_code=409, detail="Could not create order")
     db.refresh(new_order)
     return new_order
+
+@app.get("/get/orders/{restaurant_id}", response_model=list[OrderRead])
+def get_orders_logs(restaurant_id:int,
+                    db:Session = Depends(get_db),
+                    user:User = Depends(get_current_user)):
+    restaurant = get_restaurant_or_404(db, restaurant_id)
+    is_owner = restaurant.owner_id == user.id
+    if not is_owner:
+        raise HTTPException(status_code=403, detail="You do not have the right to see the logs")
+    orders = db.execute(
+        select(Order).where(Order.restaurant_id == restaurant_id)
+    ).scalars().all()
+    return orders
