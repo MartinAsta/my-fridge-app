@@ -11,7 +11,7 @@ import { RestaurantLogin } from './pages/user/restaurant_login';
 import { CreateIngredient } from './pages/responsible/create_ingredient';
 import { Fridge } from './pages/owner/fridge';
 import { CreateDish } from './pages/owner/create_dish';
-import { Dish } from './pages/owner/dish';
+import { Menu } from './pages/owner/menu';
 
 function App() {
   return (
@@ -38,7 +38,7 @@ function App() {
         <Route
           path="/dashboard/owner/restaurants/:restaurantId/fridge" element={<Fridge />} />
         <Route
-          path="/dashboard/owner/restaurants/:restaurantId/dishes" element={<Dish />} />
+          path="/dashboard/owner/restaurants/:restaurantId/dishes" element={<Menu />} />
         <Route
           path="/dashboard/owner/restaurants/:restaurantId/dishes/create" element={<CreateDish />} />
       </Routes>

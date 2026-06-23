@@ -1,4 +1,4 @@
-export function Dish() {
+export function Menu() {
     
 
     return (
