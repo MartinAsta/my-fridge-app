@@ -802,6 +802,13 @@ def create_order(restaurant_id:int,
         waiter_id = user.id,
         dish_id = payload.dish_id
     )
+    
+    for ing in dish.dish_ingredients:
+        curr_ing = db.execute(
+            select(Fridge).where(Fridge.restaurant_id == restaurant_id,
+                                 Fridge.ingredient_id == ing.ingredient_id)
+        ).scalar_one_or_none()
+        curr_ing.quantity -= ing.quantity_needed
     db.add(new_order)
     
     try:
